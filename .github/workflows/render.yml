@@ -1,4 +1,4 @@
-name: Generate Quran Shorts
+name: Quran Shorts Generator
 
 on:
   schedule:
@@ -10,33 +10,69 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
+    # 1️⃣ تحميل المشروع
+    - name: Checkout repository
       uses: actions/checkout@v4
 
+    # 2️⃣ تثبيت بايثون
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
-    - name: Install dependencies
+    # 3️⃣ تثبيت مكتبات النظام (🔥 حل مشكلة pangocairo)
+    - name: Install system dependencies
       run: |
-        pip install manim mutagen pydub requests numpy
         sudo apt update
-        sudo apt install ffmpeg -y
+        sudo apt install -y \
+          ffmpeg \
+          libcairo2-dev \
+          libpango1.0-dev \
+          libglib2.0-dev \
+          pkg-config \
+          python3-dev \
+          fonts-dejavu-core
 
+    # 4️⃣ كاش لتسريع التثبيت
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    # 5️⃣ تثبيت مكتبات Python
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install manim mutagen pydub requests numpy
+
+    # 6️⃣ تثبيت الخط العربي (Amiri)
     - name: Install Arabic font
       run: |
         mkdir -p ~/.fonts
         wget https://github.com/aliftype/amiri/releases/download/0.113/amiri-regular.ttf -O ~/.fonts/Amiri.ttf
         fc-cache -fv
 
+    # 7️⃣ تشغيل السكربت
     - name: Run script
-      run: python your_script.py
+      run: python Quran.py
 
+    # 8️⃣ حفظ الفيديو كـ artifact (اختياري للتحميل)
+    - name: Upload video
+      uses: actions/upload-artifact@v4
+      with:
+        name: quran-short
+        path: |
+          Quran_Normal.mp4
+          Quran_Shorts.mp4
+
+    # 9️⃣ حفظ الآيات المستخدمة (حتى لا تتكرر)
     - name: Commit used ayahs
       run: |
-        git config --global user.name "bot"
-        git config --global user.email "bot@example.com"
+        git config --global user.name "github-actions"
+        git config --global user.email "actions@github.com"
         git add used_ayahs.json
         git commit -m "update used ayahs" || echo "no changes"
         git push
