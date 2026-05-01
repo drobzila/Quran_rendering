@@ -1,6 +1,8 @@
-name: Render Quran Video
+name: Generate Quran Shorts
 
 on:
+  schedule:
+    - cron: "0 */6 * * *"  # كل 6 ساعات
   workflow_dispatch:
 
 jobs:
@@ -8,37 +10,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 تحميل المشروع
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: 🐍 تثبيت Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
 
-      - name: 📦 تثبيت النظام
-        run: |
-          sudo apt update
-          sudo apt install -y ffmpeg fonts-dejavu-core
-          
-      - name: 🔤 تحميل خط Amiri
-        run: |
-          mkdir -p ~/.fonts
-          wget https://github.com/aliftype/amiri/releases/download/0.113/amiri-regular.ttf -O ~/.fonts/Amiri.ttf
-          fc-cache -fv
+    - name: Install dependencies
+      run: |
+        pip install manim mutagen pydub requests numpy
+        sudo apt update
+        sudo apt install ffmpeg -y
 
-      - name: 📚 تثبيت المكتبات
-        run: |
-          pip install manim pydub mutagen requests numpy
+    - name: Install Arabic font
+      run: |
+        mkdir -p ~/.fonts
+        wget https://github.com/aliftype/amiri/releases/download/0.113/amiri-regular.ttf -O ~/.fonts/Amiri.ttf
+        fc-cache -fv
 
-      - name: 🎬 تشغيل السكريبت
-        run: |
-          python your_script.py
+    - name: Run script
+      run: python your_script.py
 
-      - name: 📤 رفع الفيديو
-        uses: actions/upload-artifact@v4
-        with:
-          name: video
-          path: |
-            Quran_Normal.mp4
-            Quran_Shorts.mp4
+    - name: Commit used ayahs
+      run: |
+        git config --global user.name "bot"
+        git config --global user.email "bot@example.com"
+        git add used_ayahs.json
+        git commit -m "update used ayahs" || echo "no changes"
+        git push
