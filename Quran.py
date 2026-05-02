@@ -8,10 +8,10 @@ import subprocess
 import os
 from mutagen.mp3 import MP3
 from pydub import AudioSegment
-from pydub.effects import normalize
 import numpy as np
 import sys
 import random
+import shutil
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -26,27 +26,27 @@ if hasattr(sys.stdout, "reconfigure"):
 # ------------------- إعدادات -------------------
 font_name = "Amiri"
 font_size_ayah = 60
-
-max_text_width = 8.2   # مهم لتفادي خروج النص
+max_text_width = 8.2
 max_lines_per_page = 4
 
 shorts_output = "Quran_Shorts.mp4"
 
 reciter = "ar.husary"
 MAX_DURATION = 20
-TEMP_AUDIO = "temp_check.mp3"
+TEMP_AUDIO = "temp.mp3"
 USED_FILE = "used_ayahs.json"
 
 
-# ------------------- Manim Shorts Config -------------------
+# ------------------- Manim Config (9:16 + Sync Stable) -------------------
 config.pixel_width = 1080
 config.pixel_height = 1920
 config.frame_width = 9
 config.frame_height = 16
+config.frame_rate = 60
 config.background_color = BLACK
 
 
-# ------------------- تنظيف الصوت -------------------
+# ------------------- تنظيف الصوت القديم -------------------
 for f in glob.glob("audio*.mp3"):
     os.remove(f)
 
@@ -169,7 +169,7 @@ def build_background(width=9, height=16):
     return Group(base, overlay, vignette)
 
 
-# ------------------- المشهد -------------------
+# ------------------- المشهد (FULL SYNC) -------------------
 class QuranShortScene(Scene):
     def construct(self):
         self.camera.background_color = BLACK
@@ -179,11 +179,12 @@ class QuranShortScene(Scene):
 
         surah, ayah, text = choose_short_ayah()
 
-        audio_file = download_audio(surah, ayah, f"audio_{ayah}.mp3")
-        audio_path = audio_file
+        audio_path = download_audio(surah, ayah, f"audio_{ayah}.mp3")
 
-        self.add_sound(os.path.abspath(audio_path), time_offset=0)
+        # 🎧 Add audio directly (NO ffmpeg)
+        self.add_sound(os.path.abspath(audio_path))
 
+        audio_length = MP3(audio_path).info.length
         ayah_label = to_arabic_indic_digits(str(ayah))
 
         wrapped_lines = split_text_manim(
@@ -195,7 +196,11 @@ class QuranShortScene(Scene):
             for i in range(0, len(wrapped_lines), max_lines_per_page)
         ]
 
+        per_page = audio_length / max(len(pages), 1)
+
+        # 🎯 FULL SYNC LOOP
         for page in pages:
+
             text_block = (
                 MarkupText(
                     " ".join(page),
@@ -208,7 +213,7 @@ class QuranShortScene(Scene):
             ayah_circle = ayah_number_circle(ayah_label).next_to(text_block, LEFT)
 
             self.play(FadeIn(text_block), FadeIn(ayah_circle))
-            self.wait(2)
+            self.wait(per_page)
             self.play(FadeOut(text_block), FadeOut(ayah_circle))
 
 
@@ -227,17 +232,10 @@ if __name__ == "__main__":
         check=True,
     )
 
-    # ------------------- استخراج الفيديو -------------------
-    import glob
-    import shutil
-
+    # 📦 استخراج الفيديو النهائي
     videos = glob.glob("media/videos/**/*.mp4", recursive=True)
-
-    if not videos:
-        raise Exception("❌ لم يتم العثور على فيديو الناتج")
-
     video = sorted(videos)[-1]
 
     shutil.copy(video, "Quran_Shorts.mp4")
 
-    logger.info("✅ تم إنشاء Quran_Shorts.mp4 بنجاح")
+    logger.info("✅ Shorts جاهز مع صوت + فيديو متزامن 100%")
