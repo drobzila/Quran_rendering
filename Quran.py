@@ -185,11 +185,16 @@ class QuranShortScene(Scene):
         track = progress_bar()
 
         for i, page in enumerate(pages, start=1):
-            text_block = MarkupText(
-                " ".join(page),
-                font=font_name,
-                font_size=font_size_ayah,
-            ).align_to(RIGHT).move_to(ORIGIN + UP * 0.5)
+            # Wrap chained calls in parentheses so line breaks are always valid Python.
+            text_block = (
+                MarkupText(
+                    " ".join(page),
+                    font=font_name,
+                    font_size=font_size_ayah,
+                )
+                .align_to(RIGHT)
+                .move_to(ORIGIN + UP * 0.5)
+            )
             
             ayah_circle = ayah_number_circle(ayah_label).next_to(text_block, LEFT)
 
