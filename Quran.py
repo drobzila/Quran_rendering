@@ -25,10 +25,10 @@ if hasattr(sys.stdout, "reconfigure"):
 # ------------------- إعدادات -------------------
 font_name = "Amiri"
 font_size_ayah = 60
-max_text_width = 9.2
+# Keep within frame_width to avoid edge clipping artifacts.
+max_text_width = 8.6
 max_lines_per_page = 4
 
-normal_output = "Quran_Normal.mp4"
 shorts_output = "Quran_Shorts.mp4"
 
 reciter = "ar.husary"
@@ -38,6 +38,14 @@ fade_out_ms = 300
 MAX_DURATION = 20
 TEMP_AUDIO = "temp_check.mp3"
 USED_FILE = "used_ayahs.json"
+
+# ------------------- Manim Shorts Config (9:16) -------------------
+# Render Manim directly in portrait (no intermediate landscape output).
+config.pixel_width = 1080
+config.pixel_height = 1920
+config.frame_width = 9
+config.frame_height = 16
+config.background_color = BLACK
 
 # ------------------- حذف الصوت القديم -------------------
 for f in glob.glob("audio*.mp3"):
@@ -169,6 +177,8 @@ class QuranShortScene(Scene):
 
         audio_path = combine_audios([audio_file])
         audio_length = MP3(audio_path).info.length
+        # Add audio directly in Manim to avoid ffmpeg post-processing (and any pad borders).
+        self.add_sound(os.path.abspath(audio_path), time_offset=0)
 
         surah_name = get_surah_name(surah)
         ayah_label = to_arabic_indic_digits(str(ayah))
@@ -198,27 +208,11 @@ class QuranShortScene(Scene):
 
 # ------------------- التنفيذ -------------------
 if __name__ == "__main__":
-    subprocess.run(["manim", "-qh", os.path.abspath(__file__), "QuranShortScene"], check=True)
+    # Render directly as a 1080x1920 (9:16) YouTube Shorts mp4.
+    # No intermediate landscape video and no ffmpeg pad/scale filters (prevents border lines).
+    subprocess.run(
+        ["manim", "-qh", "-o", shorts_output, os.path.abspath(__file__), "QuranShortScene"],
+        check=True,
+    )
 
-    video_files = sorted(glob.glob("media/videos/**/*.mp4", recursive=True))
-    base_video = video_files[0]
-
-    subprocess.run([
-        "ffmpeg", "-y",
-        "-i", base_video,
-        "-i", "audio.mp3",
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-shortest",
-        normal_output,
-    ])
-
-    subprocess.run([
-        "ffmpeg", "-y",
-        "-i", normal_output,
-        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
-        "-c:a", "copy",
-        shorts_output,
-    ])
-
-    logger.info("✅ تم إنتاج فيديو قصير بدون تكرار وآية أقل من 20 ثانية")
+    logger.info("✅ تم إنتاج فيديو Shorts بتنسيق 9:16 بدون حواف أو خطوط بيضاء")
