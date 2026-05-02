@@ -26,7 +26,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 # ------------------- GLOBAL TITLE -------------------
-VIDEO_TITLE = text   # 👈 مهم جداً للـ upload.py
+VIDEO_TITLE = ""
 
 
 # ------------------- Settings -------------------
@@ -99,7 +99,7 @@ def combine_audio(files: list[str], output="audio.mp3"):
 
 # ------------------- Random Ayah -------------------
 def choose_random_ayah():
-    global VIDEO_TITLE   # 👈 مهم
+    global VIDEO_TITLE
 
     used = load_used()
     candidates = []
@@ -122,7 +122,10 @@ def choose_random_ayah():
                 save_used(used)
                 os.remove(TEMP_AUDIO)
 
-                VIDEO_TITLE = text.strip()  # 👈 هنا العنوان = الآية
+                VIDEO_TITLE = text.strip()
+
+                with open("title.txt", "w", encoding="utf-8") as f:
+                    f.write(VIDEO_TITLE)
 
                 return surah, ayah, text
 
@@ -134,7 +137,7 @@ def choose_random_ayah():
     raise Exception("❌ لم يتم العثور على آية مناسبة")
 
 
-# ------------------- Text processing -------------------
+# ------------------- Text -------------------
 def wrap_text(text: str) -> list[str]:
     text = " ".join(text.split())
     return textwrap.wrap(text, width=wrap_width_chars)
@@ -153,10 +156,7 @@ def make_block(lines: list[str]) -> VGroup:
         for line in lines
     ]
 
-    block = VGroup(*texts).arrange(DOWN, buff=line_spacing)
-    block.move_to(ORIGIN)
-
-    return block
+    return VGroup(*texts).arrange(DOWN, buff=line_spacing).move_to(ORIGIN)
 
 
 # ------------------- Scene -------------------
@@ -205,9 +205,10 @@ if __name__ == "__main__":
     subprocess.run([
         "ffmpeg", "-y",
         "-i", normal_output,
-        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
+        "-vf",
+        "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
         "-c:a", "copy",
         shorts_output,
     ], check=True)
 
-    logger.info("✅ تم إنتاج فيديو قصير بنجاح")
+    logger.info("✅ تم إنتاج الفيديو بنجاح")
