@@ -189,8 +189,8 @@ class QuranShortScene(Scene):
                 " ".join(page),
                 font=font_name,
                 font_size=font_size_ayah,
-            )
-            .move_to(ORIGIN + UP * 0.5)
+            ).align_to(RIGHT).move_to(ORIGIN + UP * 0.5)
+            
             ayah_circle = ayah_number_circle(ayah_label).next_to(text_block, LEFT)
 
             tracker = ValueTracker(0.0)
