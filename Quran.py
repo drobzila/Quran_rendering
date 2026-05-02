@@ -5,6 +5,7 @@ import requests
 import glob
 import json
 import subprocess
+from manim.utils.fonts import register_font
 import os
 from mutagen.mp3 import MP3
 from pydub import AudioSegment
@@ -23,6 +24,9 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 # ------------------- إعدادات -------------------
+FONT_PATH = os.path.abspath("Amiri-Regular.ttf")
+register_font(FONT_PATH)
+
 font_name = "Amiri"
 font_size_ayah = 60
 max_text_width = 9.2
