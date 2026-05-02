@@ -23,7 +23,7 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 # ------------------- إعدادات -------------------
-font_name = "Amiri-Regular"
+font_name = "Amiri"
 font_size_ayah = 60
 max_text_width = 9.2
 max_lines_per_page = 4
@@ -184,12 +184,8 @@ class QuranShortScene(Scene):
         per_page = max(audio_length / len(pages), 2.0)
         track = progress_bar()
 
-        for i, page in enumerate(pages, start=1):
-            text_block = MarkupText(
-                " ".join(page),
-                font=font_name,
-                font_size=font_size_ayah,
-            )
+            text_lines = [MarkupText(line, font=font_name, font_size=font_size_ayah) for line in page]
+            text_block = VGroup(*text_lines).arrange(DOWN, buff=0.45)
             ayah_circle = ayah_number_circle(ayah_label).next_to(text_block, LEFT)
 
             tracker = ValueTracker(0.0)
