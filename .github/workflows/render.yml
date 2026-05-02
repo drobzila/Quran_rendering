@@ -32,6 +32,7 @@ jobs:
           libpango1.0-dev \
           libglib2.0-dev \
           pkg-config \
+          shutil \
           python3-dev \
           fonts-dejavu-core
 
