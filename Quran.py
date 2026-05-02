@@ -26,7 +26,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 # ------------------- GLOBAL TITLE -------------------
-VIDEO_TITLE = ""   # 👈 مهم جداً للـ upload.py
+VIDEO_TITLE = text   # 👈 مهم جداً للـ upload.py
 
 
 # ------------------- Settings -------------------
