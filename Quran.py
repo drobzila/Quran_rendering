@@ -5,7 +5,6 @@ import requests
 import glob
 import json
 import subprocess
-import shutil
 import os
 from mutagen.mp3 import MP3
 from pydub import AudioSegment
@@ -218,7 +217,6 @@ if __name__ == "__main__":
     subprocess.run(
         [
             "manim",
-            "render",
             os.path.abspath(__file__),
             "QuranShortScene",
             "-r",
@@ -228,7 +226,18 @@ if __name__ == "__main__":
         ],
         check=True,
     )
-     video = glob.glob("media/videos/**/*.mp4", recursive=True, recursive=True)[0]
-     shutil.copy(video, "Quran_Shorts.mp4")
 
-    logger.info("✅ تم إنتاج Shorts نظيف 9:16 بدون خطوط بيضاء")
+    # ------------------- استخراج الفيديو -------------------
+    import glob
+    import shutil
+
+    videos = glob.glob("media/videos/**/*.mp4", recursive=True)
+
+    if not videos:
+        raise Exception("❌ لم يتم العثور على فيديو الناتج")
+
+    video = sorted(videos)[-1]
+
+    shutil.copy(video, "Quran_Shorts.mp4")
+
+    logger.info("✅ تم إنشاء Quran_Shorts.mp4 بنجاح")
