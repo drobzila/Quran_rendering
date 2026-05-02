@@ -54,8 +54,7 @@ if __name__ == "__main__":
     title = get_title()
 
     description = """
-تلاوة جميلة من القرآن الكريم 📖
-
+    
 #quran #shorts #قرآن #islam
     """.strip()
 
