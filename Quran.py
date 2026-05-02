@@ -25,6 +25,10 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 
+# ------------------- GLOBAL TITLE -------------------
+VIDEO_TITLE = ""   # 👈 مهم جداً للـ upload.py
+
+
 # ------------------- Settings -------------------
 font_name = "Amiri"
 font_size_ayah = 72
@@ -93,10 +97,11 @@ def combine_audio(files: list[str], output="audio.mp3"):
     return output
 
 
-# ------------------- Random Ayah with API check -------------------
+# ------------------- Random Ayah -------------------
 def choose_random_ayah():
-    used = load_used()
+    global VIDEO_TITLE   # 👈 مهم
 
+    used = load_used()
     candidates = []
 
     for s_idx, surah in enumerate(QURAN_DATA["data"]["surahs"], start=1):
@@ -116,6 +121,9 @@ def choose_random_ayah():
                 used.add(f"{surah}:{ayah}")
                 save_used(used)
                 os.remove(TEMP_AUDIO)
+
+                VIDEO_TITLE = text.strip()  # 👈 هنا العنوان = الآية
+
                 return surah, ayah, text
 
             os.remove(TEMP_AUDIO)
