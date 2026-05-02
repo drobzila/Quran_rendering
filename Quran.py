@@ -158,11 +158,6 @@ def build_background(width=9, height=16):
 
     return Group(base, overlay, vignette)
 
-def progress_bar(total_width=8.6, y=-6.9):
-    track = Line(LEFT * (total_width / 2), RIGHT * (total_width / 2), stroke_width=6)
-    track.move_to([0, y, 0])
-    return track
-
 # ------------------- المشهد -------------------
 class QuranShortScene(Scene):
     def construct(self):
@@ -182,7 +177,6 @@ class QuranShortScene(Scene):
         pages = [wrapped_lines[i:i+max_lines_per_page] for i in range(0, len(wrapped_lines), max_lines_per_page)]
 
         per_page = max(audio_length / len(pages), 2.0)
-        track = progress_bar()
 
         for i, page in enumerate(pages, start=1):
             # Wrap chained calls in parentheses so line breaks are always valid Python.
@@ -198,17 +192,9 @@ class QuranShortScene(Scene):
             
             ayah_circle = ayah_number_circle(ayah_label).next_to(text_block, LEFT)
 
-            tracker = ValueTracker(0.0)
-            fill = always_redraw(lambda:
-                Line(track.get_start(),
-                     track.get_start() + RIGHT * (track.get_length() * tracker.get_value()),
-                     stroke_width=6)
-            )
-
-            self.add(track, fill)
             self.play(FadeIn(text_block), FadeIn(ayah_circle))
-            self.play(tracker.animate.set_value(1.0), run_time=per_page, rate_func=linear)
-            self.play(FadeOut(text_block), FadeOut(ayah_circle), FadeOut(track), FadeOut(fill))
+            self.wait(per_page)
+            self.play(FadeOut(text_block), FadeOut(ayah_circle))
 
 # ------------------- التنفيذ -------------------
 if __name__ == "__main__":
