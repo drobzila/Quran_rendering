@@ -120,15 +120,7 @@ def to_arabic_indic_digits(value: str) -> str:
     return str(value).translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
 
 def ayah_number_circle(number):
-    # Give the badge a fill so the stroke doesn't read as "two parallel ovals"
-    # (inner/outer edges of a thick outline) in the rendered video.
-    circle = Circle(
-        radius=0.35,
-        color=GOLD,
-        stroke_width=2,
-        fill_color=BLACK,
-        fill_opacity=1.0,
-    )
+    circle = Circle(radius=0.35, color=GOLD, stroke_width=3)
     number_text = Text(number, font=font_name, font_size=28, color=GOLD)
     number_text.move_to(circle.get_center())
     return VGroup(circle, number_text)
@@ -238,9 +230,12 @@ if __name__ == "__main__":
     subprocess.run([
         "ffmpeg", "-y",
         "-i", normal_output,
-        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black",
+        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
         "-c:a", "copy",
         shorts_output,
     ])
 
     logger.info("✅ تم إنتاج فيديو قصير بدون تكرار وآية أقل من 20 ثانية")
+
+يظهر خطان في الفيديو خطان أبيضان يعيقان المشهد تماما  
+كيف نحذفه من فضلك
