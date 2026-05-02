@@ -39,7 +39,8 @@ def upload_video(file_path, title, description, privacy="public"):
                 "categoryId": "22"
             },
             "status": {
-                "privacyStatus": privacy
+                "privacyStatus": privacy,
+                "selfDeclaredMadeForKids": False
             }
         },
         media_body=MediaFileUpload(file_path)
