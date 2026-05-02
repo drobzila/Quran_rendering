@@ -61,7 +61,7 @@ jobs:
     - name: Restore token.pkl
       run: echo "${{ secrets.YT_TOKEN }}" | base64 -d > token.pkl
 
-    # ------------------- 🎬 RUN SCRIPT -------------------
+    # ------------------- 🎬 RUN GENERATION -------------------
     - name: Run script
       run: python Quran.py
 
