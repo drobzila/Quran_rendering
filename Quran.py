@@ -40,7 +40,7 @@ line_spacing = 0.5
 background_color = "#0b0f1a"
 text_color = WHITE
 
-reciter = "ar.husary"
+reciter = "ar.minshawi"
 
 normal_output = "Quran_Normal.mp4"
 shorts_output = "Quran_Shorts.mp4"
