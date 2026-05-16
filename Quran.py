@@ -28,6 +28,24 @@ if hasattr(sys.stdout, "reconfigure"):
 # ------------------- GLOBAL TITLE -------------------
 VIDEO_TITLE = ""
 
+FALLBACK_TITLES = [
+    "تلاوة قرآنية مؤثرة 🌿",
+    "راحة نفسية مع القرآن الكريم",
+    "آيات تريح القلب 🤍",
+    "استمع لكلام الله بخشوع",
+    "تلاوة هادئة للقلب والروح",
+    "القرآن الكريم بصوت جميل",
+    "آيات من القرآن الكريم",
+    "تلاوة قصيرة ومؤثرة",
+    "سكينة وطمأنينة مع القرآن",
+    "أجمل التلاوات القرآنية",
+    "دقيقة من الجمال القرآني",
+    "تلاوة تلامس القلب",
+    "نور القرآن الكريم ✨",
+    "كلام الله يريح القلوب",
+    "استمع وتدبر آيات الله",
+]
+
 
 # ------------------- Settings -------------------
 font_name = "Amiri"
@@ -122,10 +140,22 @@ def choose_random_ayah():
                 save_used(used)
                 os.remove(TEMP_AUDIO)
 
-                VIDEO_TITLE = text.strip()
+                VIDEO_TITLE = (
+                    text.strip()
+                    .replace("\n", " ")
+                    .replace("\r", " ")
+                )
+
+                MAX_TITLE = 90
+
+                if not VIDEO_TITLE:
+                    VIDEO_TITLE = random.choice(FALLBACK_TITLES)
+
+                elif len(VIDEO_TITLE) > MAX_TITLE:
+                    VIDEO_TITLE = random.choice(FALLBACK_TITLES)
 
                 with open("title.txt", "w", encoding="utf-8") as f:
-                    f.write(VIDEO_TITLE)
+                    f.write(VIDEO_TITLE.strip())
 
                 return surah, ayah, text
 
