@@ -30,9 +30,7 @@ def upload_video(file_path, title, description, privacy="public"):
             "snippet": {
                 "title": title,
                 "description": description,
-                "categoryId": "22",
-                "defaultLanguage": "ar",
-                "defaultAudioLanguage": "ar"
+                "categoryId": "22"
             },
             "status": {
                 "privacyStatus": privacy,
@@ -56,9 +54,8 @@ if __name__ == "__main__":
     title = get_title()
 
     description = """
-آيات قرآنية قصيرة 🌿
-
-#قرآن #القرآن_الكريم #اسلام #shorts
+    
+#quran #shorts #قرآن #islam
     """.strip()
 
     upload_video(video_file, title, description)
