@@ -73,10 +73,17 @@ jobs:
     - name: Upload video artifact
       uses: actions/upload-artifact@v4
       with:
-        name: quran-short
+        name: quran-short-${{ github.run_number }} # استخدام رقم التشغيل لمنع التداخل
         path: |
           Quran_Normal.mp4
           Quran_Shorts.mp4
+        retention-days: 1 # يتم حذفه تلقائياً بعد يوم واحد لتوفير المساحة
+
+    # ------------------- 🧹 CLEAN OLD ARTIFACTS -------------------
+    - name: Delete old artifacts
+      uses: cml-actions/delete-artifact@v2
+      with:
+        name: "*" # يحذف الـ Artifacts القديمة المتراكمة لتفريغ المساحة فوراً
 
     # ------------------- 💾 SAVE USED AYAH -------------------
     - name: Commit used ayahs
