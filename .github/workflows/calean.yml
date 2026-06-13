@@ -1,0 +1,15 @@
+name: Clean All Artifacts
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  clean-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all artifacts
+        uses: cml-actions/delete-artifact@v2
+        with:
+          name: "*"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # يمنح الأكشن صلاحية الحذف تلقائياً
