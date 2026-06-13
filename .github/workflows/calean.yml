@@ -1,15 +1,15 @@
 name: Clean All Artifacts
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch: # يتيح لك تشغيل الـ Workflow يدوياً بضغطة زر
 
 jobs:
   clean-artifacts:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write # تصريح ضروري جداً للسماح للأكشن بحذف الـ Artifacts
     steps:
       - name: Delete all artifacts
-        uses: cml-actions/delete-artifact@v2
+        uses: actions/delete-artifact@v3
         with:
-          name: "*"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # يمنح الأكشن صلاحية الحذف تلقائياً
+          name: "*" # علامة النجمة تعني تحديد وحذف كل شيء
