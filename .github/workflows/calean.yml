@@ -1,15 +1,26 @@
 name: Clean All Artifacts
 
 on:
-  workflow_dispatch: # يتيح لك تشغيل الـ Workflow يدوياً بضغطة زر
+  workflow_dispatch: # تشغيل يدوياً بضغطة زر
 
 jobs:
   clean-artifacts:
     runs-on: ubuntu-latest
     permissions:
-      actions: write # تصريح ضروري جداً للسماح للأكشن بحذف الـ Artifacts
+      actions: write # ضروري جداً لمنح صلاحية الحذف
     steps:
-      - name: Delete all artifacts
-        uses: actions/delete-artifact@v3
-        with:
-          name: "*" # علامة النجمة تعني تحديد وحذف كل شيء
+      - name: Delete all artifacts using GitHub CLI
+        run: |
+          echo "جاري جلب وحذف جميع الـ Artifacts..."
+          
+          # جلب قائمة بجميع الـ Artifacts وحذفها واحداً تلو الآخر
+          gh api -X GET repos/${{ github.repository }}/actions/artifacts --paginate -q '.artifacts[].id' | while read -r artifact_id; do
+            if [ ! -z "$artifact_id" ]; then
+              echo "جاري حذف الـ Artifact ذو المعرف: $artifact_id"
+              gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/$artifact_id
+            fi
+          done
+          
+          echo "تمت عملية الحذف بنجاح!"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # تمرير التوكن لتشغيل أداة الـ CLI
