@@ -60,7 +60,21 @@ jobs:
 
     # ------------------- 🔐 RESTORE GOOGLE SERVICE ACCOUNT -------------------
     - name: Restore Google Drive service account key
-      run: echo '${{ secrets.GDRIVE_SA_KEY }}' > gdrive_service_account.json
+      run: echo "${{ secrets.GDRIVE_SA_KEY_B64 }}" | base64 -d > gdrive_service_account.json
+
+    - name: Verify Google Drive credentials
+      run: |
+        python -c "
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        creds = service_account.Credentials.from_service_account_file(
+            'gdrive_service_account.json',
+            scopes=['https://www.googleapis.com/auth/drive.file']
+        )
+        service = build('drive', 'v3', credentials=creds)
+        about = service.about().get(fields='user').execute()
+        print('✅ مصادقة Google Drive ناجحة، الحساب:', about['user']['emailAddress'])
+        "
 
     # ------------------- 🎬 GENERATE BATCH OF VIDEOS -------------------
     - name: Generate batch videos
@@ -76,14 +90,6 @@ jobs:
           --folder batch_output \
           --drive-folder-id "${{ secrets.GDRIVE_FOLDER_ID }}" \
           --key-file gdrive_service_account.json
-
-    # ------------------- 📦 نسخة احتياطية مؤقتة كـ Artifact -------------------
-    - name: Upload artifact backup
-      uses: actions/upload-artifact@v4
-      with:
-        name: quran-batch-${{ github.run_number }}
-        path: batch_output/
-        retention-days: 1
 
     # ------------------- 💾 SAVE USED AYAHS -------------------
     - name: Commit used ayahs
