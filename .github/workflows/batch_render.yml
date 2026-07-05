@@ -1,0 +1,95 @@
+name: Quran Batch Shorts Generator (Google Drive)
+
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "عدد الفيديوهات المطلوب إنشاؤها"
+        required: false
+        default: "50"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: true
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          ffmpeg \
+          libcairo2-dev \
+          libpango1.0-dev \
+          libglib2.0-dev \
+          pkg-config \
+          python3-dev \
+          fonts-dejavu-core
+
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install manim mutagen pydub requests numpy google-api-python-client google-auth google-auth-oauthlib
+
+    - name: Register local font
+      run: |
+        mkdir -p ~/.fonts
+        cp Amiri-Regular.ttf ~/.fonts/
+        fc-cache -fv
+
+    # ------------------- 🔐 RESTORE GOOGLE SERVICE ACCOUNT -------------------
+    - name: Restore Google Drive service account key
+      run: echo '${{ secrets.GDRIVE_SA_KEY }}' > gdrive_service_account.json
+
+    # ------------------- 🎬 GENERATE BATCH OF VIDEOS -------------------
+    - name: Generate batch videos
+      env:
+        BATCH_COUNT: ${{ github.event.inputs.count }}
+        OUTPUT_DIR: batch_output
+      run: python generate_batch.py
+
+    # ------------------- 📤 UPLOAD TO GOOGLE DRIVE -------------------
+    - name: Upload videos to Google Drive
+      run: |
+        python upload_drive.py \
+          --folder batch_output \
+          --drive-folder-id "${{ secrets.GDRIVE_FOLDER_ID }}" \
+          --key-file gdrive_service_account.json
+
+    # ------------------- 📦 نسخة احتياطية مؤقتة كـ Artifact -------------------
+    - name: Upload artifact backup
+      uses: actions/upload-artifact@v4
+      with:
+        name: quran-batch-${{ github.run_number }}
+        path: batch_output/
+        retention-days: 1
+
+    # ------------------- 💾 SAVE USED AYAHS -------------------
+    - name: Commit used ayahs
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "actions@github.com"
+        git add used_ayahs.json
+        git commit -m "update used ayahs (batch run #${{ github.run_number }})" || echo "no changes"
+        git push

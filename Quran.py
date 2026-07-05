@@ -5,6 +5,7 @@ import glob
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -224,26 +225,49 @@ class QuranScene(Scene):
 # =========================================================================
 # 🚀 تشغيل دمج الفيديو التلقائي والصوت عبر FFmpeg
 # =========================================================================
-if __name__ == "__main__":
+def render_one(output_path: str = shorts_output, keep_media: bool = False) -> str:
+    """
+    ينشئ فيديو شورت واحد (آية عشوائية جديدة لم تُستخدم من قبل) ويحفظه في output_path.
+    قابلة للاستدعاء عدة مرات على التوالي (مثلاً لإنشاء 50 فيديو دفعة واحدة)،
+    وكل استدعاء يختار آية مختلفة تلقائياً بفضل used_ayahs.json.
+    """
     subprocess.run(
         ["manim", "-qh", os.path.abspath(__file__), "QuranScene"],
         check=True
     )
 
-    generated_video = glob.glob("media/videos/**/*QuranScene.mp4", recursive=True)[0]
+    matches = glob.glob("media/videos/**/*QuranScene.mp4", recursive=True)
+    if not matches:
+        raise RuntimeError("❌ لم يتم العثور على فيديو ناتج من Manim")
+    generated_video = matches[0]
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
 
     subprocess.run([
         "ffmpeg", "-y",
         "-i", generated_video,
         "-i", "audio.mp3",
-        "-c:v", "copy",        
+        "-c:v", "copy",
         "-c:a", "aac",
         "-shortest",
-        shorts_output,
+        output_path,
     ], check=True)
 
+    # 🧹 تنظيف الملفات المؤقتة بين كل فيديو والآخر
     for f in glob.glob("audio_*.mp3"):
         try: os.remove(f)
         except: pass
+    try:
+        os.remove("audio.mp3")
+    except FileNotFoundError:
+        pass
 
-    logger.info(f"🎉 تم بنجاح تصدير فيديو الشورت النيوني: {shorts_output}")
+    if not keep_media:
+        shutil.rmtree("media", ignore_errors=True)
+
+    logger.info(f"🎉 تم بنجاح تصدير فيديو الشورت النيوني: {output_path}")
+    return output_path
+
+
+if __name__ == "__main__":
+    render_one(shorts_output)
