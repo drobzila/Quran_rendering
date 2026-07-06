@@ -133,6 +133,8 @@ jobs:
 
           git add used_ayahs.json
 
-          git commit -m "update used ayahs (batch run #${{ github.run_number }})" || echo "No changes"
+          git commit -m "update used ayahs (batch run #${{ github.run_number }})" || exit 0
 
-          git push
+          git pull --rebase origin main
+
+          git push origin main
