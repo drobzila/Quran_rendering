@@ -122,19 +122,3 @@ jobs:
           name: quran-batch
           path: batch_output/
           retention-days: 1
-
-      # ------------------- SAVE USED AYAHS -------------------
-
-      - name: Commit used ayahs
-        if: success()
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-
-          git add used_ayahs.json
-
-          git commit -m "update used ayahs (batch run #${{ github.run_number }})" || exit 0
-
-          git pull --rebase origin main
-
-          git push origin main
