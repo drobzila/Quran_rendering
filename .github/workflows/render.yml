@@ -1,13 +1,17 @@
 name: Quran Shorts Generator
+
 on:
   schedule:
     - cron: "0 8,15 * * *"
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -61,10 +65,6 @@ jobs:
     - name: Run script
       run: python Quran.py
 
-    # ------------------- 🔄 RENAME OUTPUT FILE -------------------
-    - name: Rename output file
-      run: mv Quran_Neon_Shorts.mp4 Quran_Shorts.mp4
-
     # ------------------- 📤 UPLOAD TO YOUTUBE -------------------
     - name: Upload to YouTube
       run: python upload.py
@@ -73,10 +73,17 @@ jobs:
     - name: Upload video artifact
       uses: actions/upload-artifact@v4
       with:
-        name: quran-short-${{ github.run_number }}
-        path: Quran_Shorts.mp4
-        retention-days: 1
-        if-no-files-found: warn
+        name: quran-short-${{ github.run_number }} # استخدام رقم التشغيل لمنع التداخل
+        path: |
+          Quran_Normal.mp4
+          Quran_Shorts.mp4
+        retention-days: 1 # يتم حذفه تلقائياً بعد يوم واحد لتوفير المساحة
+
+    # ------------------- 🧹 CLEAN OLD ARTIFACTS -------------------
+    - name: Delete old artifacts
+      uses: cml-actions/delete-artifact@v2
+      with:
+        name: "*" # يحذف الـ Artifacts القديمة المتراكمة لتفريغ المساحة فوراً
 
     # ------------------- 💾 SAVE USED AYAH -------------------
     - name: Commit used ayahs
