@@ -25,6 +25,13 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 
+# ------------------- إعدادات أبعاد الفيديو (عمودي للشورتس) -------------------
+config.frame_width = 9
+config.frame_height = 16
+config.pixel_width = 1080
+config.pixel_height = 1920
+
+
 # ------------------- GLOBAL TITLE -------------------
 VIDEO_TITLE = ""
 
@@ -60,7 +67,6 @@ text_color = WHITE
 
 reciter = "ar.abdulbasitmurattal"
 
-normal_output = "Quran_Normal.mp4"
 shorts_output = "Quran_Shorts.mp4"
 
 MAX_DURATION = 20
@@ -167,7 +173,68 @@ def choose_random_ayah():
     raise Exception("❌ لم يتم العثور على آية مناسبة")
 
 
-# ------------------- Text -------------------
+import numpy as np
+
+
+def build_background():
+    width = config.frame_width
+    height = config.frame_height
+
+    h, w = 1920, 1080
+    noise = np.random.normal(loc=0.0, scale=1.0, size=(h, w)).astype(np.float32)
+    noise = (noise - noise.min()) / (noise.max() - noise.min() + 1e-8)
+    rgb = (noise * 12).astype(np.uint8)
+    rgba = np.stack([rgb, rgb, rgb, np.full_like(rgb, 16, dtype=np.uint8)], axis=-1)
+
+    base = Rectangle(width=width, height=height, fill_color=background_color, fill_opacity=1, stroke_width=0)
+    overlay = ImageMobject(rgba).set_resampling_algorithm(RESAMPLING_ALGORITHMS["nearest"])
+    overlay.set_height(height)
+    overlay.set_width(width)
+    overlay.set_opacity(0.25)
+
+    vignette = Rectangle(width=width, height=height, fill_color=BLACK, fill_opacity=0.2, stroke_width=0)
+
+    return Group(base, overlay, vignette)
+
+
+def decorative_divider(width=2.0):
+    return Line(LEFT * (width / 2), RIGHT * (width / 2), stroke_color=GOLD, stroke_width=1.5)
+
+
+
+    return QURAN_DATA["data"]["surahs"][surah - 1]["name"]
+
+
+def get_surah_name(surah: int) -> str:
+    return QURAN_DATA["data"]["surahs"][surah - 1]["name"]
+
+
+def to_arabic_indic_digits(value) -> str:
+    return str(value).translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
+
+
+def ayah_number_circle(number: str) -> VGroup:
+    circle = Circle(radius=0.35, color=GOLD, stroke_width=3)
+    number_text = Text(number, font=font_name, font_size=28, color=GOLD)
+    number_text.move_to(circle.get_center())
+    return VGroup(circle, number_text)
+
+
+def progress_bar(total_width=None, y=None) -> Line:
+    total_width = total_width or (config.frame_width - 0.4)
+    y = y if y is not None else -(config.frame_height / 2 - 0.5)
+
+    track = Line(
+        LEFT * (total_width / 2),
+        RIGHT * (total_width / 2),
+        stroke_color=GRAY_E,
+        stroke_width=6,
+    )
+    track.move_to([0, y, 0])
+    return track
+
+
+
 def wrap_text(text: str) -> list[str]:
     text = " ".join(text.split())
     return textwrap.wrap(text, width=wrap_width_chars)
@@ -193,8 +260,11 @@ def make_block(lines: list[str]) -> VGroup:
 class QuranScene(Scene):
     def construct(self):
         self.camera.background_color = background_color
+        self.add(build_background())
 
         surah, ayah, text = choose_random_ayah()
+        surah_name = get_surah_name(surah)
+        ayah_label = to_arabic_indic_digits(str(ayah))
 
         audio_file = download_audio(surah, ayah, f"audio_{ayah}.mp3")
         audio_path = combine_audio([audio_file])
@@ -203,14 +273,87 @@ class QuranScene(Scene):
         lines = wrap_text(text)
         pages = paginate(lines)
 
-        per_page = max(audio_length / len(pages), 2.5)
+        # ------------------- المقدمة (اسم السورة بالمنتصف وبحجم كبير) -------------------
+        surah_title = Text(surah_name, font=font_name, font_size=90, color=WHITE)
+        ayah_ref = Text(f"آية {ayah_label}", font=font_name, font_size=42, color=GRAY_B)
 
-        for page in pages:
+        intro = VGroup(
+            surah_title,
+            ayah_ref,
+        ).arrange(DOWN, buff=0.4).move_to(ORIGIN)
+        self.play(FadeIn(intro, scale=0.92), run_time=0.6, rate_func=smooth)
+        self.wait(0.35)
+        self.play(FadeOut(intro, scale=1.05), run_time=0.4, rate_func=smooth)
+
+        per_page = max(audio_length / len(pages), 2.5)
+        track = progress_bar()
+        tracker = ValueTracker(0.0)
+        fill = always_redraw(
+            lambda: Line(
+                track.get_start(),
+                track.get_start() + RIGHT * (track.get_length() * tracker.get_value()),
+                stroke_color=GOLD,
+                stroke_width=6,
+            )
+        )
+        bar = VGroup(track, fill)
+        self.add(bar)
+
+        for page_index, page in enumerate(pages, start=1):
             block = make_block(page)
 
-            self.play(FadeIn(block), run_time=1)
-            self.wait(per_page - 1)
-            self.play(FadeOut(block), run_time=0.8)
+            plate = RoundedRectangle(
+                corner_radius=0.3,
+                width=min(block.width + 1.2, config.frame_width - 0.4),
+                height=min(block.height + 1.0, config.frame_height - 4.0),
+                stroke_width=1,
+                stroke_color=GOLD_E,
+                stroke_opacity=0.4,
+                fill_color=BLACK,
+                fill_opacity=0.35,
+            ).move_to(block.get_center())
+
+            ayah_circle = ayah_number_circle(ayah_label)
+            ayah_circle.next_to(block, UP, buff=0.4)
+
+            glow = Circle(radius=0.42, color=GOLD, stroke_width=1, stroke_opacity=0.3, fill_opacity=0)
+            glow.move_to(ayah_circle.get_center())
+
+            info_text = Text(
+                f"{surah_name} ({to_arabic_indic_digits(str(surah))})",
+                font=font_name,
+                font_size=32,
+                color=GRAY,
+            ).next_to(block, DOWN, buff=0.8)
+
+            page_text = Text(
+                f"{to_arabic_indic_digits(str(page_index))}/{to_arabic_indic_digits(str(len(pages)))}",
+                font=font_name,
+                font_size=26,
+                color=GRAY_B,
+            ).to_edge(DOWN, buff=0.9)
+
+            self.play(
+                FadeIn(plate),
+                FadeIn(block, scale=0.94),
+                FadeIn(ayah_circle, scale=0.8),
+                FadeIn(glow, scale=0.7),
+                FadeIn(info_text),
+                FadeIn(page_text),
+                run_time=1,
+                rate_func=smooth,
+            )
+            self.play(tracker.animate.set_value(page_index / len(pages)), run_time=per_page - 1, rate_func=linear)
+            self.play(
+                FadeOut(block, scale=1.03),
+                FadeOut(plate),
+                FadeOut(ayah_circle),
+                FadeOut(glow),
+                FadeOut(info_text),
+                FadeOut(page_text),
+                run_time=0.7,
+                rate_func=smooth,
+            )
 
 
 # ------------------- Run -------------------
@@ -222,22 +365,20 @@ if __name__ == "__main__":
 
     video = glob.glob("media/videos/**/*QuranScene.mp4", recursive=True)[0]
 
+    # مدة المقدمة (اسم السورة) قبل ظهور نص الآية = FadeIn(0.5) + wait(0.35) + FadeOut(0.35)
+    intro_delay = 1.2
+
+    # تصدير مباشر لفديو الشورتس (بدون مرحلة الفديو الكبير)
+    # -itsoffset يؤخر بداية الصوت باش يبدأ مع ظهور نص الآية، مو من ثانية 0
     subprocess.run([
         "ffmpeg", "-y",
         "-i", video,
+        "-itsoffset", str(intro_delay),
         "-i", "audio.mp3",
-        "-c:v", "copy",
+        "-vf", "scale=1080:1920",
+        "-c:v", "libx264",
         "-c:a", "aac",
         "-shortest",
-        normal_output,
-    ], check=True)
-
-    subprocess.run([
-        "ffmpeg", "-y",
-        "-i", normal_output,
-        "-vf",
-        "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
-        "-c:a", "copy",
         shorts_output,
     ], check=True)
 
