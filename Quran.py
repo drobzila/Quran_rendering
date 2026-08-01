@@ -355,21 +355,23 @@ class QuranScene(Scene):
                 rate_func=smooth,
             )
 
+def render_one(output_path: str):
+    global shorts_output
 
-# ------------------- Run -------------------
-if __name__ == "__main__":
+    shorts_output = output_path
+
     subprocess.run(
         ["manim", "-qh", os.path.abspath(__file__), "QuranScene"],
         check=True
     )
 
-    video = glob.glob("media/videos/**/*QuranScene.mp4", recursive=True)[0]
+    video = glob.glob(
+        "media/videos/**/*QuranScene.mp4",
+        recursive=True
+    )[0]
 
-    # مدة المقدمة (اسم السورة) قبل ظهور نص الآية = FadeIn(0.5) + wait(0.35) + FadeOut(0.35)
     intro_delay = 1.2
 
-    # تصدير مباشر لفديو الشورتس (بدون مرحلة الفديو الكبير)
-    # -itsoffset يؤخر بداية الصوت باش يبدأ مع ظهور نص الآية، مو من ثانية 0
     subprocess.run([
         "ffmpeg", "-y",
         "-i", video,
@@ -379,7 +381,12 @@ if __name__ == "__main__":
         "-c:v", "libx264",
         "-c:a", "aac",
         "-shortest",
-        shorts_output,
+        output_path,
     ], check=True)
 
-    logger.info("✅ تم إنتاج الفيديو بنجاح")
+    logger.info(f"✅ تم إنتاج الفيديو: {output_path}")
+
+
+# ------------------- Run -------------------
+if __name__ == "__main__":
+    render_one(shorts_output)
