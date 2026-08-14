@@ -65,7 +65,7 @@ line_spacing = 0.5
 background_color = "#0b0f1a"
 text_color = WHITE
 
-reciter = "ar.yasserdossary"
+reciter = "ar.husary"
 
 shorts_output = "Quran_Shorts.mp4"
 
