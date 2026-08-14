@@ -95,12 +95,15 @@ def save_used(data):
 # ------------------- Audio -------------------
 def download_audio(surah: int, ayah: int, filename: str) -> str:
     url = f"https://api.alquran.cloud/v1/ayah/{surah}:{ayah}/{reciter}"
-    r = requests.get(url, timeout=20).json()
-    audio_url = r["data"]["audio"]
+    r = requests.get(url, timeout=20)
+    r.raise_for_status()
+    data = r.json()
+    audio_url = data["data"]["audio"]
 
-    audio_data = requests.get(audio_url, timeout=20).content
+    audio_response = requests.get(audio_url, timeout=20)
+    audio_response.raise_for_status()
     with open(filename, "wb") as f:
-        f.write(audio_data)
+        f.write(audio_response.content)
 
     return filename
 
@@ -188,8 +191,7 @@ def build_background():
 
     base = Rectangle(width=width, height=height, fill_color=background_color, fill_opacity=1, stroke_width=0)
     overlay = ImageMobject(rgba).set_resampling_algorithm(RESAMPLING_ALGORITHMS["nearest"])
-    overlay.set_height(height)
-    overlay.set_width(width)
+    overlay.set(height=height, width=width)
     overlay.set_opacity(0.25)
 
     vignette = Rectangle(width=width, height=height, fill_color=BLACK, fill_opacity=0.2, stroke_width=0)
@@ -199,10 +201,6 @@ def build_background():
 
 def decorative_divider(width=2.0):
     return Line(LEFT * (width / 2), RIGHT * (width / 2), stroke_color=GOLD, stroke_width=1.5)
-
-
-
-    return QURAN_DATA["data"]["surahs"][surah - 1]["name"]
 
 
 def get_surah_name(surah: int) -> str:
@@ -266,7 +264,7 @@ class QuranScene(Scene):
         surah_name = get_surah_name(surah)
         ayah_label = to_arabic_indic_digits(str(ayah))
 
-        audio_file = download_audio(surah, ayah, f"audio_{ayah}.mp3")
+        audio_file = download_audio(surah, ayah, f"audio_{surah}_{ayah}.mp3")
         audio_path = combine_audio([audio_file])
         audio_length = MP3(audio_path).info.length
 
@@ -354,6 +352,7 @@ class QuranScene(Scene):
                 run_time=0.7,
                 rate_func=smooth,
             )
+
 
 def render_one(output_path: str):
     global shorts_output
