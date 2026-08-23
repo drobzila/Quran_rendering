@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import os
+import threading
+import traceback
+import uuid
+from pathlib import Path
+
+from flask import Flask, jsonify, send_file
+
+import Quran
+
+app = Flask(__name__)
+
+API_KEY = os.getenv("RENDERER_API_KEY", "")
+BASE_DIR = Path(__file__).resolve().parent
+OUTPUT_DIR = BASE_DIR / "renderer_output"
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+jobs: dict[str, dict] = {}
+lock = threading.Lock()
+render_lock = threading.Lock()
+
+
+def authorized(request):
+    if not API_KEY:
+        return False
+    return request.headers.get("X-Renderer-Key") == API_KEY
+
+
+def run_render(job_id: str):
+    output_path = OUTPUT_DIR / f"{job_id}.mp4"
+    with lock:
+        jobs[job_id] = {"status": "rendering", "error": None}
+
+    try:
+        # Manim + the current Quran.py renderer use shared temporary files,
+        # so only one render is allowed at a time in this service.
+        with render_lock:
+            Quran.render_one(str(output_path))
+
+        title = ""
+        title_file = BASE_DIR / "title.txt"
+        if title_file.exists():
+            title = title_file.read_text(encoding="utf-8").strip()
+
+        with lock:
+            jobs[job_id] = {
+                "status": "completed",
+                "error": None,
+                "title": title,
+                "file": str(output_path),
+            }
+    except Exception as exc:
+        traceback.print_exc()
+        with lock:
+            jobs[job_id] = {
+                "status": "failed",
+                "error": str(exc),
+            }
+
+
+@app.get("/")
+def health():
+    return "Quran renderer is running"
+
+
+@app.post("/render")
+def start_render():
+    from flask import request
+
+    if not authorized(request):
+        return jsonify({"error": "unauthorized"}), 401
+
+    job_id = uuid.uuid4().hex
+    with lock:
+        jobs[job_id] = {"status": "queued", "error": None}
+
+    threading.Thread(target=run_render, args=(job_id,), daemon=True).start()
+    return jsonify({"job_id": job_id, "status": "queued"}), 202
+
+
+@app.get("/render/<job_id>")
+def render_status(job_id):
+    from flask import request
+
+    if not authorized(request):
+        return jsonify({"error": "unauthorized"}), 401
+
+    with lock:
+        job = jobs.get(job_id)
+
+    if job is None:
+        return jsonify({"error": "job_not_found"}), 404
+
+    result = {"job_id": job_id, **job}
+    if job.get("status") == "completed":
+        result["download_path"] = f"/render/{job_id}/download"
+    return jsonify(result)
+
+
+@app.get("/render/<job_id>/download")
+def download_render(job_id):
+    from flask import request
+
+    if not authorized(request):
+        return jsonify({"error": "unauthorized"}), 401
+
+    with lock:
+        job = jobs.get(job_id)
+
+    if not job or job.get("status") != "completed":
+        return jsonify({"error": "video_not_ready"}), 409
+
+    path = Path(job["file"])
+    if not path.exists():
+        return jsonify({"error": "video_file_missing"}), 404
+
+    return send_file(path, mimetype="video/mp4", as_attachment=True, download_name=f"Quran_{job_id}.mp4")
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
