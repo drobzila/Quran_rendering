@@ -57,9 +57,80 @@ jobs:
     - name: Restore token.pkl
       run: echo "${{ secrets.YT_TOKEN }}" | base64 -d > token.pkl
 
+    # ------------------- 📝 REMEMBER USED AYAH STATE -------------------
+    - name: Save previous used ayahs
+      run: |
+        if [ -f used_ayahs.json ]; then
+          cp used_ayahs.json used_ayahs_before.json
+        else
+          echo '[]' > used_ayahs_before.json
+        fi
+
     # ------------------- 🎬 RUN GENERATION -------------------
     - name: Run script
       run: python Quran.py
+
+    # ------------------- 📖 PREPARE EXPORT DETAILS -------------------
+    - name: Prepare export details
+      run: |
+        python - <<'PY'
+        import json
+        import subprocess
+
+        with open("used_ayahs_before.json", "r", encoding="utf-8") as f:
+            before = set(json.load(f))
+
+        with open("used_ayahs.json", "r", encoding="utf-8") as f:
+            after = set(json.load(f))
+
+        new_ayahs = sorted(after - before)
+        if not new_ayahs:
+            raise RuntimeError("لم يتم تحديد الآية الجديدة")
+
+        key = new_ayahs[-1]
+        surah, ayah = map(int, key.split(":", 1))
+
+        with open("quran.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        surah_data = data["data"]["surahs"][surah - 1]
+        surah_name = surah_data["name"]
+        ayah_text = surah_data["ayahs"][ayah - 1]["text"].strip()
+
+        duration = None
+        try:
+            result = subprocess.run(
+                [
+                    "ffprobe", "-v", "error",
+                    "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    "audio.mp3",
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            duration = round(float(result.stdout.strip()), 2)
+        except Exception:
+            pass
+
+        export_info = {
+            "surah": surah,
+            "surah_name": surah_name,
+            "ayah": ayah,
+            "text": ayah_text,
+            "duration": duration,
+        }
+
+        with open("export_info.json", "w", encoding="utf-8") as f:
+            json.dump(export_info, f, ensure_ascii=False, indent=2)
+
+        print(json.dumps(export_info, ensure_ascii=False, indent=2))
+        PY
+
+    # ------------------- 📤 UPLOAD TO YOUTUBE -------------------
+    - name: Upload to YouTube
+      run: python upload.py
 
     # ------------------- 📱 TELEGRAM NOTIFICATION -------------------
     # Telegram is informational only. If it fails, the workflow continues.
@@ -83,22 +154,26 @@ jobs:
             raise SystemExit(0)
 
         try:
-            with open("used_ayahs.json", "r", encoding="utf-8") as f:
-                used = json.load(f)
+            with open("export_info.json", "r", encoding="utf-8") as f:
+                info = json.load(f)
 
-            # Quran.py records the selected ayah in title.txt; use the latest
-            # successful run's title as the main notification detail.
-            title = ""
-            if os.path.exists("title.txt"):
-                with open("title.txt", "r", encoding="utf-8") as f:
-                    title = f.read().strip()
+            youtube_url = ""
+            if os.path.exists("youtube_url.txt"):
+                with open("youtube_url.txt", "r", encoding="utf-8") as f:
+                    youtube_url = f.read().strip()
+
+            duration = info.get("duration")
+            duration_text = f"{duration:.2f} ثانية" if isinstance(duration, (int, float)) else "غير متاح"
 
             message = (
-                "🎬 تم تصدير فيديو قرآن جديد بنجاح!\n\n"
-                f"📖 الآية: {title or 'تم إنشاء الفيديو بنجاح'}\n"
-                f"📁 الملف: Quran_Shorts.mp4\n"
-                f"🔢 إجمالي الآيات المستخدمة: {len(used)}\n"
-                f"🔗 التشغيل: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                "🎬 تم نشر فيديو قرآن جديد بنجاح!\n\n"
+                f"🕌 السورة: {info['surah_name']}\n"
+                f"🔢 الآية: {info['ayah']}\n\n"
+                f"﴿ {info['text']} ﴾\n\n"
+                f"⏱ مدة التلاوة: {duration_text}\n"
+                "📁 الملف: Quran_Shorts.mp4\n\n"
+                f"📺 YouTube: {youtube_url or 'تم الرفع بنجاح'}\n"
+                f"⚙️ Actions: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             )
 
             url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -118,10 +193,6 @@ jobs:
             # Telegram must never make the rendering workflow fail.
             raise SystemExit(0)
         PY
-
-    # ------------------- 📤 UPLOAD TO YOUTUBE -------------------
-    - name: Upload to YouTube
-      run: python upload.py
 
     # ------------------- 📦 ARTIFACT -------------------
     - name: Upload video artifact
