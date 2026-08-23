@@ -10,6 +10,8 @@ import sys
 import textwrap
 import random
 import requests
+import time
+import uuid
 
 from mutagen.mp3 import MP3
 from pydub import AudioSegment
@@ -70,8 +72,13 @@ reciter = "ar.husary"
 shorts_output = "Quran_Shorts.mp4"
 
 MAX_DURATION = 20
+MIN_DURATION = 4
 USED_FILE = "used_ayahs.json"
 TEMP_AUDIO = "temp.mp3"
+APPROVAL_FILE = "pending_approval.json"
+APPROVAL_TIMEOUT = 21600  # 6 ساعات
+GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "drobzila/Quran_rendering")
+GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 
 
 # ------------------- Load Quran -------------------
@@ -124,6 +131,88 @@ def combine_audio(files: list[str], output="audio.mp3"):
     return output
 
 
+# ------------------- Telegram Approval -------------------
+def create_approval_request(surah: int, ayah: int, text: str, duration: float) -> str:
+    request_id = uuid.uuid4().hex[:12]
+
+    request = {
+        "request_id": request_id,
+        "status": "pending",
+        "surah": surah,
+        "surah_name": get_surah_name(surah),
+        "ayah": ayah,
+        "text": text.strip().replace("\n", " ").replace("\r", " "),
+        "duration": round(duration, 3),
+        "created_at": int(time.time()),
+    }
+
+    with open(APPROVAL_FILE, "w", encoding="utf-8") as f:
+        json.dump(request, f, ensure_ascii=False, indent=2)
+
+    # GitHub Actions already has a credentialed checkout with contents: write.
+    # Push the request so the Telegram bot (running elsewhere) can see it.
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        subprocess.run(["git", "add", APPROVAL_FILE], check=True)
+        subprocess.run(
+            ["git", "config", "user.name", "github-actions"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "actions@github.com"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "commit", "-m", "request ayah approval"],
+            check=False,
+        )
+        subprocess.run(["git", "push", "origin", GITHUB_BRANCH], check=True)
+
+    logger.info(
+        "📨 تم إرسال طلب الموافقة: %s — %s:%s",
+        request_id,
+        surah,
+        ayah,
+    )
+
+    return request_id
+
+
+def wait_for_approval(request_id: str) -> bool:
+    raw_url = (
+        f"https://raw.githubusercontent.com/"
+        f"{GITHUB_REPOSITORY}/{GITHUB_BRANCH}/{APPROVAL_FILE}"
+    )
+    deadline = time.time() + APPROVAL_TIMEOUT
+
+    while time.time() < deadline:
+        try:
+            response = requests.get(
+                raw_url,
+                params={"t": int(time.time())},
+                timeout=10,
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("request_id") == request_id:
+                    status = data.get("status")
+
+                    if status == "approved":
+                        logger.info("✅ تمت الموافقة على الآية %s", request_id)
+                        return True
+
+                    if status == "rejected":
+                        logger.info("🔄 تم رفض الآية %s", request_id)
+                        return False
+        except Exception as exc:
+            logger.warning("تعذر قراءة حالة الموافقة: %s", exc)
+
+        time.sleep(5)
+
+    raise TimeoutError(
+        "⏰ انتهت مهلة انتظار الموافقة على الآية من Telegram."
+    )
+
+
 # ------------------- Random Ayah -------------------
 def choose_random_ayah():
     global VIDEO_TITLE
@@ -144,33 +233,60 @@ def choose_random_ayah():
             download_audio(surah, ayah, TEMP_AUDIO)
             duration = get_duration(TEMP_AUDIO)
 
-            if duration <= MAX_DURATION:
-                used.add(f"{surah}:{ayah}")
-                save_used(used)
+            # تجاهل الآيات القصيرة جدًا، مع إبقاء الحد الأعلى الحالي.
+            if not (MIN_DURATION <= duration <= MAX_DURATION):
                 os.remove(TEMP_AUDIO)
+                continue
 
-                VIDEO_TITLE = (
-                    text.strip()
-                    .replace("\n", " ")
-                    .replace("\r", " ")
-                )
-
-                MAX_TITLE = 90
-
-                if not VIDEO_TITLE:
-                    VIDEO_TITLE = random.choice(FALLBACK_TITLES)
-
-                elif len(VIDEO_TITLE) > MAX_TITLE:
-                    VIDEO_TITLE = random.choice(FALLBACK_TITLES)
-
-                with open("title.txt", "w", encoding="utf-8") as f:
-                    f.write(VIDEO_TITLE.strip())
-
-                return surah, ayah, text
-
+            request_id = create_approval_request(
+                surah,
+                ayah,
+                text,
+                duration,
+            )
             os.remove(TEMP_AUDIO)
 
-        except Exception:
+            approved = wait_for_approval(request_id)
+
+            if not approved:
+                continue
+
+            used.add(f"{surah}:{ayah}")
+            save_used(used)
+
+            VIDEO_TITLE = (
+                text.strip()
+                .replace("\n", " ")
+                .replace("\r", " ")
+            )
+
+            MAX_TITLE = 90
+
+            if not VIDEO_TITLE:
+                VIDEO_TITLE = random.choice(FALLBACK_TITLES)
+
+            elif len(VIDEO_TITLE) > MAX_TITLE:
+                VIDEO_TITLE = random.choice(FALLBACK_TITLES)
+
+            with open("title.txt", "w", encoding="utf-8") as f:
+                f.write(VIDEO_TITLE.strip())
+
+            return surah, ayah, text
+
+        except TimeoutError:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "تعذر معالجة الآية %s:%s: %s",
+                surah,
+                ayah,
+                exc,
+            )
+            if os.path.exists(TEMP_AUDIO):
+                try:
+                    os.remove(TEMP_AUDIO)
+                except OSError:
+                    pass
             continue
 
     raise Exception("❌ لم يتم العثور على آية مناسبة")
