@@ -1,7 +1,8 @@
 name: Quran Shorts Generator
 on:
   schedule:
-    - cron: "0 8,15 * * *"
+    # Avoid :00, when scheduled workflows are more likely to be delayed.
+    - cron: "17 8,15 * * *"
   workflow_dispatch:
 permissions:
   contents: write
@@ -22,14 +23,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        sudo apt install -y \
-          ffmpeg \
-          libcairo2-dev \
-          libpango1.0-dev \
-          libglib2.0-dev \
-          pkg-config \
-          python3-dev \
-          fonts-dejavu-core
+        sudo apt install -y           ffmpeg           libcairo2-dev           libpango1.0-dev           libglib2.0-dev           pkg-config           python3-dev           fonts-dejavu-core
 
     - name: Cache pip
       uses: actions/cache@v5
@@ -50,14 +44,12 @@ jobs:
         cp Amiri-Regular.ttf ~/.fonts/
         fc-cache -fv
 
-    # ------------------- 🔐 RESTORE GOOGLE AUTH FILES -------------------
     - name: Restore client_secret.json
       run: echo '${{ secrets.CLIENT_SECRET }}' > client_secret.json
 
     - name: Restore token.pkl
       run: echo "${{ secrets.YT_TOKEN }}" | base64 -d > token.pkl
 
-    # ------------------- 📝 REMEMBER USED AYAH STATE -------------------
     - name: Save previous used ayahs
       run: |
         if [ -f used_ayahs.json ]; then
@@ -66,11 +58,9 @@ jobs:
           echo '[]' > used_ayahs_before.json
         fi
 
-    # ------------------- 🎬 RUN GENERATION -------------------
     - name: Run script
       run: python Quran.py
 
-    # ------------------- 📖 PREPARE EXPORT DETAILS -------------------
     - name: Prepare export details
       run: |
         python - <<'PY'
@@ -128,12 +118,9 @@ jobs:
         print(json.dumps(export_info, ensure_ascii=False, indent=2))
         PY
 
-    # ------------------- 📤 UPLOAD TO YOUTUBE -------------------
     - name: Upload to YouTube
       run: python upload.py
 
-    # ------------------- 📱 TELEGRAM NOTIFICATION -------------------
-    # Telegram is informational only. If it fails, the workflow continues.
     - name: Notify Telegram
       if: success()
       env:
@@ -190,11 +177,9 @@ jobs:
             print("✅ تم إرسال إشعار Telegram.")
         except Exception as exc:
             print(f"⚠️ تعذر إرسال إشعار Telegram: {exc}")
-            # Telegram must never make the rendering workflow fail.
             raise SystemExit(0)
         PY
 
-    # ------------------- 📦 ARTIFACT -------------------
     - name: Upload video artifact
       uses: actions/upload-artifact@v7
       with:
@@ -203,7 +188,6 @@ jobs:
         retention-days: 1
         if-no-files-found: warn
 
-    # ------------------- 💾 SAVE USED AYAH -------------------
     - name: Commit used ayahs
       run: |
         git config --global user.name "github-actions"
