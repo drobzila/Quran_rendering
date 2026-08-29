@@ -1,8 +1,11 @@
 name: Quran Shorts Generator
 on:
   schedule:
-    # Avoid :00, when scheduled workflows are more likely to be delayed.
-    - cron: "17 8,15 * * *"
+    # GitHub Actions cron uses UTC. Algeria is UTC+1.
+    # Sunday–Friday: 12:30 PM Algeria = 11:30 UTC.
+    - cron: "30 11 * * 0-5"
+    # Saturday: 6:00 PM Algeria = 17:00 UTC.
+    - cron: "0 17 * * 6"
   workflow_dispatch:
 permissions:
   contents: write
