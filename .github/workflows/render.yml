@@ -42,7 +42,8 @@ jobs:
           for h, m in slots:
               d = local.replace(hour=h, minute=m, second=0, microsecond=0)
               values.append(d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
-          with open("$GITHUB_OUTPUT", "a") as f:
+          import os
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write("publish1=" + values[0] + "\n")
               f.write("publish2=" + values[1] + "\n")
           print("Video 1:", values[0])
