@@ -1,55 +1,107 @@
 name: Quran Daily Scheduler
+
 on:
+  # GitHub Actions schedule uses UTC. Run early enough to leave room for
+  # GitHub's normal scheduling delay while the Python step below selects the
+  # next two real future publishing slots.
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
+
+# Prevent two scheduled/manual runs from rendering and scheduling duplicate
+# videos at the same time.
+concurrency:
+  group: quran-daily-scheduler
+  cancel-in-progress: false
+
 permissions:
   contents: write
+
 jobs:
   build-and-schedule:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev libglib2.0-dev pkg-config python3-dev fonts-dejavu-core
-          pip install --upgrade pip
-          pip install manim mutagen pydub requests numpy google-api-python-client google-auth google-auth-oauthlib
+          python -m pip install --upgrade pip
+          python -m pip install manim mutagen pydub requests numpy google-api-python-client google-auth google-auth-oauthlib
+
       - name: Register font
         run: |
           mkdir -p ~/.fonts
           cp Amiri-Regular.ttf ~/.fonts/
           fc-cache -fv
+
       - name: Restore credentials
         run: |
-          echo '${{ secrets.CLIENT_SECRET }}' > client_secret.json
-          echo "${{ secrets.YT_TOKEN }}" | base64 -d > token.pkl
+          printf '%s' '${{ secrets.CLIENT_SECRET }}' > client_secret.json
+          printf '%s' '${{ secrets.YT_TOKEN }}' | base64 -d > token.pkl
+
+      # Select the next TWO future publishing slots in Algeria time.
+      # This is deliberately based on the current time, not only on the
+      # workflow start date, so a delayed GitHub scheduled run cannot produce
+      # a "PUBLISH_AT must be in the future" error.
       - name: Calculate publishing times
         id: times
         run: |
           python - <<'PY'
           from datetime import datetime, timedelta, timezone
           import os
-          now = datetime.now(timezone.utc)
-          dz = timezone(timedelta(hours=1))
-          local = now.astimezone(dz)
-          # Saturday has the strongest evening activity on the channel heatmap.
-          slots = [(14, 0), (20, 0)] if local.weekday() == 5 else [(12, 30), (19, 0)]
-          values = []
-          for h, m in slots:
-              d = local.replace(hour=h, minute=m, second=0, microsecond=0)
-              values.append(d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
-          import os
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("publish1=" + values[0] + "\n")
-              f.write("publish2=" + values[1] + "\n")
-          print("Video 1:", values[0])
-          print("Video 2:", values[1])
+
+          DZ = timezone(timedelta(hours=1))
+          now_utc = datetime.now(timezone.utc)
+          local_now = now_utc.astimezone(DZ)
+
+          def slots_for_date(day):
+              # Saturday: stronger evening activity on the channel heatmap.
+              if day.weekday() == 5:
+                  return [(14, 0), (20, 0)]
+              return [(12, 30), (19, 0)]
+
+          candidates = []
+          for day_offset in range(0, 4):
+              day = (local_now + timedelta(days=day_offset)).date()
+              for hour, minute in slots_for_date(day):
+                  candidate = datetime(
+                      day.year, day.month, day.day, hour, minute,
+                      tzinfo=DZ
+                  )
+                  if candidate > local_now:
+                      candidates.append(candidate)
+              if len(candidates) >= 2:
+                  break
+
+          if len(candidates) < 2:
+              raise RuntimeError("Could not calculate two future publishing slots")
+
+          publish1 = candidates[0].astimezone(timezone.utc)
+          publish2 = candidates[1].astimezone(timezone.utc)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write("publish1=" + publish1.strftime("%Y-%m-%dT%H:%M:%SZ") + "\n")
+              f.write("publish2=" + publish2.strftime("%Y-%m-%dT%H:%M:%SZ") + "\n")
+              f.write("local1=" + candidates[0].strftime("%Y-%m-%d %H:%M") + "\n")
+              f.write("local2=" + candidates[1].strftime("%Y-%m-%d %H:%M") + "\n")
+
+          print("Current Algeria time:", local_now.strftime("%Y-%m-%d %H:%M:%S"))
+          print("Video 1 UTC:", publish1.strftime("%Y-%m-%dT%H:%M:%SZ"))
+          print("Video 1 Algeria:", candidates[0].strftime("%Y-%m-%d %H:%M"))
+          print("Video 2 UTC:", publish2.strftime("%Y-%m-%dT%H:%M:%SZ"))
+          print("Video 2 Algeria:", candidates[1].strftime("%Y-%m-%d %H:%M"))
           PY
+
       - name: Generate video 1
         env:
           OUTPUT_FILE: Quran_Shorts_1.mp4
@@ -57,34 +109,54 @@ jobs:
           rm -rf media
           rm -f audio.mp3 title.txt youtube_url.txt
           python Quran.py
+
       - name: Upload and schedule video 1
         env:
           VIDEO_FILE: Quran_Shorts_1.mp4
           PUBLISH_AT: ${{ steps.times.outputs.publish1 }}
         run: python upload.py
+
       - name: Notify Telegram about video 1
         if: success()
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PUBLISH_AT: ${{ steps.times.outputs.publish1 }}
+          PUBLISH_LOCAL: ${{ steps.times.outputs.local1 }}
         run: |
           python - <<'PY'
-          import os, urllib.parse, urllib.request
-          token=os.environ.get("BOT_TOKEN")
-          chat=os.environ.get("TELEGRAM_CHAT_ID")
+          import os
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ.get("BOT_TOKEN")
+          chat = os.environ.get("TELEGRAM_CHAT_ID")
           if not token or not chat:
               print("Telegram secrets missing; skipping")
               raise SystemExit(0)
-          url=""
+
+          url = ""
           if os.path.exists("youtube_url.txt"):
-              url=open("youtube_url.txt",encoding="utf-8").read().strip()
-          text="🎬 تم إنشاء وجدولة الفيديو الأول بنجاح!\n\n⏰ موعد النشر (UTC): "+os.environ["PUBLISH_AT"]+"\n🔗 "+(url or "تمت الجدولة بنجاح")
-          data=urllib.parse.urlencode({"chat_id":chat,"text":text}).encode()
-          req=urllib.request.Request("https://api.telegram.org/bot"+token+"/sendMessage",data=data,method="POST")
-          with urllib.request.urlopen(req,timeout=20) as r:
-              print("Telegram:",r.status)
+              with open("youtube_url.txt", encoding="utf-8") as f:
+                  url = f.read().strip()
+
+          text = (
+              "🎬 تم إنشاء وجدولة الفيديو الأول بنجاح!\n\n"
+              "🇩🇿 موعد النشر (الجزائر): " + os.environ["PUBLISH_LOCAL"] + "\n"
+              "🌍 موعد النشر (UTC): " + os.environ["PUBLISH_AT"] + "\n"
+              "🔗 " + (url or "تمت الجدولة بنجاح")
+          )
+
+          data = urllib.parse.urlencode({"chat_id": chat, "text": text}).encode()
+          req = urllib.request.Request(
+              "https://api.telegram.org/bot" + token + "/sendMessage",
+              data=data,
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=20) as response:
+              print("Telegram:", response.status)
           PY
+
       - name: Generate video 2
         env:
           OUTPUT_FILE: Quran_Shorts_2.mp4
@@ -92,38 +164,59 @@ jobs:
           rm -rf media
           rm -f audio.mp3 title.txt youtube_url.txt
           python Quran.py
+
       - name: Upload and schedule video 2
         env:
           VIDEO_FILE: Quran_Shorts_2.mp4
           PUBLISH_AT: ${{ steps.times.outputs.publish2 }}
         run: python upload.py
+
       - name: Notify Telegram about video 2
         if: success()
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PUBLISH_AT: ${{ steps.times.outputs.publish2 }}
+          PUBLISH_LOCAL: ${{ steps.times.outputs.local2 }}
         run: |
           python - <<'PY'
-          import os, urllib.parse, urllib.request
-          token=os.environ.get("BOT_TOKEN")
-          chat=os.environ.get("TELEGRAM_CHAT_ID")
+          import os
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ.get("BOT_TOKEN")
+          chat = os.environ.get("TELEGRAM_CHAT_ID")
           if not token or not chat:
               print("Telegram secrets missing; skipping")
               raise SystemExit(0)
-          url=""
+
+          url = ""
           if os.path.exists("youtube_url.txt"):
-              url=open("youtube_url.txt",encoding="utf-8").read().strip()
-          text="🎬 تم إنشاء وجدولة الفيديو الثاني بنجاح!\n\n⏰ موعد النشر (UTC): "+os.environ["PUBLISH_AT"]+"\n🔗 "+(url or "تمت الجدولة بنجاح")
-          data=urllib.parse.urlencode({"chat_id":chat,"text":text}).encode()
-          req=urllib.request.Request("https://api.telegram.org/bot"+token+"/sendMessage",data=data,method="POST")
-          with urllib.request.urlopen(req,timeout=20) as r:
-              print("Telegram:",r.status)
+              with open("youtube_url.txt", encoding="utf-8") as f:
+                  url = f.read().strip()
+
+          text = (
+              "🎬 تم إنشاء وجدولة الفيديو الثاني بنجاح!\n\n"
+              "🇩🇿 موعد النشر (الجزائر): " + os.environ["PUBLISH_LOCAL"] + "\n"
+              "🌍 موعد النشر (UTC): " + os.environ["PUBLISH_AT"] + "\n"
+              "🔗 " + (url or "تمت الجدولة بنجاح")
+          )
+
+          data = urllib.parse.urlencode({"chat_id": chat, "text": text}).encode()
+          req = urllib.request.Request(
+              "https://api.telegram.org/bot" + token + "/sendMessage",
+              data=data,
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=20) as response:
+              print("Telegram:", response.status)
           PY
+
       - name: Commit used ayahs
+        if: success()
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add used_ayahs.json
-          git commit -m "Update used ayahs" || echo "No changes"
+          git diff --cached --quiet || git commit -m "Update used ayahs"
           git push
