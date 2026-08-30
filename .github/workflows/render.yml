@@ -60,6 +60,29 @@ jobs:
           VIDEO_FILE: Quran_Shorts_1.mp4
           PUBLISH_AT: ${{ steps.times.outputs.publish1 }}
         run: python upload.py
+      - name: Notify Telegram about video 1
+        if: success()
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUBLISH_AT: ${{ steps.times.outputs.publish1 }}
+        run: |
+          python - <<'PY'
+          import os, urllib.parse, urllib.request
+          token=os.environ.get("BOT_TOKEN")
+          chat=os.environ.get("TELEGRAM_CHAT_ID")
+          if not token or not chat:
+              print("Telegram secrets missing; skipping")
+              raise SystemExit(0)
+          url=""
+          if os.path.exists("youtube_url.txt"):
+              url=open("youtube_url.txt",encoding="utf-8").read().strip()
+          text="🎬 تم إنشاء وجدولة الفيديو الأول بنجاح!\n\n⏰ موعد النشر (UTC): "+os.environ["PUBLISH_AT"]+"\n🔗 "+(url or "تمت الجدولة بنجاح")
+          data=urllib.parse.urlencode({"chat_id":chat,"text":text}).encode()
+          req=urllib.request.Request("https://api.telegram.org/bot"+token+"/sendMessage",data=data,method="POST")
+          with urllib.request.urlopen(req,timeout=20) as r:
+              print("Telegram:",r.status)
+          PY
       - name: Generate video 2
         env:
           OUTPUT_FILE: Quran_Shorts_2.mp4
@@ -72,6 +95,29 @@ jobs:
           VIDEO_FILE: Quran_Shorts_2.mp4
           PUBLISH_AT: ${{ steps.times.outputs.publish2 }}
         run: python upload.py
+      - name: Notify Telegram about video 2
+        if: success()
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUBLISH_AT: ${{ steps.times.outputs.publish2 }}
+        run: |
+          python - <<'PY'
+          import os, urllib.parse, urllib.request
+          token=os.environ.get("BOT_TOKEN")
+          chat=os.environ.get("TELEGRAM_CHAT_ID")
+          if not token or not chat:
+              print("Telegram secrets missing; skipping")
+              raise SystemExit(0)
+          url=""
+          if os.path.exists("youtube_url.txt"):
+              url=open("youtube_url.txt",encoding="utf-8").read().strip()
+          text="🎬 تم إنشاء وجدولة الفيديو الثاني بنجاح!\n\n⏰ موعد النشر (UTC): "+os.environ["PUBLISH_AT"]+"\n🔗 "+(url or "تمت الجدولة بنجاح")
+          data=urllib.parse.urlencode({"chat_id":chat,"text":text}).encode()
+          req=urllib.request.Request("https://api.telegram.org/bot"+token+"/sendMessage",data=data,method="POST")
+          with urllib.request.urlopen(req,timeout=20) as r:
+              print("Telegram:",r.status)
+          PY
       - name: Commit used ayahs
         run: |
           git config user.name "github-actions"
