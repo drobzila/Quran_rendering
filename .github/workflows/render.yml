@@ -33,6 +33,7 @@ jobs:
         run: |
           python - <<'PY'
           from datetime import datetime, timedelta, timezone
+          import os
           now = datetime.now(timezone.utc)
           dz = timezone(timedelta(hours=1))
           local = now.astimezone(dz)
