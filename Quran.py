@@ -343,4 +343,4 @@ def render_one(output_path: str):
 
 
 if __name__ == "__main__":
-    render_one(shorts_output)
+    render_one(os.environ.get("OUTPUT_FILE", shorts_output))
