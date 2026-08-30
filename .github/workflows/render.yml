@@ -1,200 +1,73 @@
-name: Quran Shorts Generator
+name: Quran Daily Scheduler
 on:
   schedule:
-    # GitHub Actions cron uses UTC. Algeria is UTC+1.
-    # Sunday–Friday: 12:30 PM Algeria = 11:30 UTC.
-    - cron: "30 11 * * 0-5"
-    # Saturday: 6:00 PM Algeria = 17:00 UTC.
-    - cron: "0 17 * * 6"
+    - cron: "0 6 * * *"
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
-  build:
+  build-and-schedule:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v7
-      with:
-        persist-credentials: true
-
-    - name: Setup Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.11"
-
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y           ffmpeg           libcairo2-dev           libpango1.0-dev           libglib2.0-dev           pkg-config           python3-dev           fonts-dejavu-core
-
-    - name: Cache pip
-      uses: actions/cache@v5
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Install Python dependencies
-      run: |
-        pip install --upgrade pip
-        pip install manim mutagen pydub requests numpy google-api-python-client google-auth google-auth-oauthlib
-
-    - name: Register local font
-      run: |
-        mkdir -p ~/.fonts
-        cp Amiri-Regular.ttf ~/.fonts/
-        fc-cache -fv
-
-    - name: Restore client_secret.json
-      run: echo '${{ secrets.CLIENT_SECRET }}' > client_secret.json
-
-    - name: Restore token.pkl
-      run: echo "${{ secrets.YT_TOKEN }}" | base64 -d > token.pkl
-
-    - name: Save previous used ayahs
-      run: |
-        if [ -f used_ayahs.json ]; then
-          cp used_ayahs.json used_ayahs_before.json
-        else
-          echo '[]' > used_ayahs_before.json
-        fi
-
-    - name: Run script
-      run: python Quran.py
-
-    - name: Prepare export details
-      run: |
-        python - <<'PY'
-        import json
-        import subprocess
-
-        with open("used_ayahs_before.json", "r", encoding="utf-8") as f:
-            before = set(json.load(f))
-
-        with open("used_ayahs.json", "r", encoding="utf-8") as f:
-            after = set(json.load(f))
-
-        new_ayahs = sorted(after - before)
-        if not new_ayahs:
-            raise RuntimeError("لم يتم تحديد الآية الجديدة")
-
-        key = new_ayahs[-1]
-        surah, ayah = map(int, key.split(":", 1))
-
-        with open("quran.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        surah_data = data["data"]["surahs"][surah - 1]
-        surah_name = surah_data["name"]
-        ayah_text = surah_data["ayahs"][ayah - 1]["text"].strip()
-
-        duration = None
-        try:
-            result = subprocess.run(
-                [
-                    "ffprobe", "-v", "error",
-                    "-show_entries", "format=duration",
-                    "-of", "default=noprint_wrappers=1:nokey=1",
-                    "audio.mp3",
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            duration = round(float(result.stdout.strip()), 2)
-        except Exception:
-            pass
-
-        export_info = {
-            "surah": surah,
-            "surah_name": surah_name,
-            "ayah": ayah,
-            "text": ayah_text,
-            "duration": duration,
-        }
-
-        with open("export_info.json", "w", encoding="utf-8") as f:
-            json.dump(export_info, f, ensure_ascii=False, indent=2)
-
-        print(json.dumps(export_info, ensure_ascii=False, indent=2))
-        PY
-
-    - name: Upload to YouTube
-      run: python upload.py
-
-    - name: Notify Telegram
-      if: success()
-      env:
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      run: |
-        python - <<'PY'
-        import json
-        import os
-        import urllib.parse
-        import urllib.request
-
-        bot_token = os.environ.get("BOT_TOKEN", "")
-        chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
-
-        if not bot_token or not chat_id:
-            print("⚠️ Telegram secrets are not configured; skipping notification.")
-            raise SystemExit(0)
-
-        try:
-            with open("export_info.json", "r", encoding="utf-8") as f:
-                info = json.load(f)
-
-            youtube_url = ""
-            if os.path.exists("youtube_url.txt"):
-                with open("youtube_url.txt", "r", encoding="utf-8") as f:
-                    youtube_url = f.read().strip()
-
-            duration = info.get("duration")
-            duration_text = f"{duration:.2f} ثانية" if isinstance(duration, (int, float)) else "غير متاح"
-
-            message = (
-                "🎬 تم نشر فيديو قرآن جديد بنجاح!\n\n"
-                f"🕌 السورة: {info['surah_name']}\n"
-                f"🔢 الآية: {info['ayah']}\n\n"
-                f"﴿ {info['text']} ﴾\n\n"
-                f"⏱ مدة التلاوة: {duration_text}\n"
-                "📁 الملف: Quran_Shorts.mp4\n\n"
-                f"📺 YouTube: {youtube_url or 'تم الرفع بنجاح'}\n"
-                f"⚙️ Actions: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            )
-
-            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-            payload = urllib.parse.urlencode({
-                "chat_id": chat_id,
-                "text": message,
-            }).encode("utf-8")
-
-            request = urllib.request.Request(url, data=payload, method="POST")
-            with urllib.request.urlopen(request, timeout=15) as response:
-                if response.status != 200:
-                    raise RuntimeError(f"Telegram returned HTTP {response.status}")
-
-            print("✅ تم إرسال إشعار Telegram.")
-        except Exception as exc:
-            print(f"⚠️ تعذر إرسال إشعار Telegram: {exc}")
-            raise SystemExit(0)
-        PY
-
-    - name: Upload video artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: quran-short-${{ github.run_number }}
-        path: Quran_Shorts.mp4
-        retention-days: 1
-        if-no-files-found: warn
-
-    - name: Commit used ayahs
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "actions@github.com"
-        git add used_ayahs.json
-        git commit -m "update used ayahs" || echo "no changes"
-        git push
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: |
+          sudo apt update
+          sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev libglib2.0-dev pkg-config python3-dev fonts-dejavu-core
+          pip install --upgrade pip
+          pip install manim mutagen pydub requests numpy google-api-python-client google-auth google-auth-oauthlib
+      - run: |
+          mkdir -p ~/.fonts
+          cp Amiri-Regular.ttf ~/.fonts/
+          fc-cache -fv
+      - run: |
+          echo '${{ secrets.CLIENT_SECRET ${{' > client_secret.json
+          echo "${{ secrets.YT_TOKEN ${{" | base64 -d > token.pkl
+      - id: times
+        run: |
+          python - <<'PY'
+          from datetime import datetime, timedelta, timezone
+          now = datetime.now(timezone.utc)
+          dz = timezone(timedelta(hours=1))
+          local = now.astimezone(dz)
+          slots = [(14,0),(20,0)] if local.weekday() == 5 else [(12,30),(19,0)]
+          values = []
+          for h,m in slots:
+              d = local.replace(hour=h, minute=m, second=0, microsecond=0)
+              values.append(d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
+          with open("$GITHUB_OUTPUT","a") as f:
+              f.write("publish1="+values[0]+"\n")
+              f.write("publish2="+values[1]+"\n")
+          print(values)
+          PY
+      - name: Generate video 1
+        env:
+          OUTPUT_FILE: Quran_Shorts_1.mp4
+        run: |
+          rm -rf media; rm -f audio.mp3 title.txt youtube_url.txt
+          python Quran.py
+      - name: Schedule video 1
+        env:
+          VIDEO_FILE: Quran_Shorts_1.mp4
+          PUBLISH_AT: ${{ steps.times.outputs.publish1 ${{
+        run: python upload.py
+      - name: Generate video 2
+        env:
+          OUTPUT_FILE: Quran_Shorts_2.mp4
+        run: |
+          rm -rf media; rm -f audio.mp3 title.txt youtube_url.txt
+          python Quran.py
+      - name: Schedule video 2
+        env:
+          VIDEO_FILE: Quran_Shorts_2.mp4
+          PUBLISH_AT: ${{ steps.times.outputs.publish2 ${{
+        run: python upload.py
+      - name: Commit used ayahs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add used_ayahs.json
+          git commit -m "Update used ayahs" || echo "No changes"
+          git push
