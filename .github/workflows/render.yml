@@ -1,11 +1,11 @@
 name: Quran Daily Scheduler
 
 on:
-  # GitHub Actions schedule uses UTC. Run early enough to leave room for
-  # GitHub's normal scheduling delay while the Python step below selects the
+  # GitHub Actions schedule uses UTC. Run away from the top of the hour to reduce the risk of GitHub
+  # Actions schedule congestion and leave room for normal scheduling delay while the Python step below selects the
   # next two real future publishing slots.
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 # Prevent two scheduled/manual runs from rendering and scheduling duplicate
