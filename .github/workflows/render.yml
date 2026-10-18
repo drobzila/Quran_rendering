@@ -36,7 +36,8 @@ jobs:
           sudo apt update
           sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev libglib2.0-dev pkg-config python3-dev fonts-dejavu-core
           python -m pip install --upgrade pip
-          python -m pip install manim mutagen pydub requests numpy google-api-python-client google-auth google-auth-oauthlib
+          python -m pip install -r requirements.txt
+          python -m pip install google-api-python-client google-auth google-auth-oauthlib
 
       - name: Check rendering dependencies
         run: |
