@@ -5,5 +5,5 @@ gunicorn>=23.0.0
 manim==0.22.0
 mutagen>=1.47.0
 pydub>=0.25.1
-numpy<2.3
+numpy==2.2.6
 Pillow==11.3.0
