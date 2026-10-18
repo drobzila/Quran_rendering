@@ -38,6 +38,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install manim mutagen pydub requests numpy google-api-python-client google-auth google-auth-oauthlib
 
+      - name: Check rendering dependencies
+        run: |
+         python -c "import numpy, PIL, manim; print('NumPy:', numpy.__version__); print('Pillow:', PIL.__version__); print('Manim:', manim.__version__)"
+
       - name: Register font
         run: |
           mkdir -p ~/.fonts
