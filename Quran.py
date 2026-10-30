@@ -12,8 +12,6 @@ import random
 import requests
 
 from mutagen.mp3 import MP3
-from pydub import AudioSegment
-from pydub.effects import normalize
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -54,8 +52,8 @@ font_size_ayah = 72
 wrap_width_chars = 42
 max_lines_per_page = 5
 line_spacing = 0.5
-background_color = "#0b0f1a"
-text_color = WHITE
+background_color = "#050505"
+text_color = "#f4e7c1"
 reciter = "ar.husary"
 shorts_output = "Quran_Shorts.mp4"
 MIN_DURATION = 4
@@ -94,15 +92,6 @@ def download_audio(surah: int, ayah: int, filename: str) -> str:
 
 def get_duration(file):
     return MP3(file).info.length
-
-
-def combine_audio(files: list[str], output="audio.mp3"):
-    audio = AudioSegment.empty()
-    for f in files:
-        audio += AudioSegment.from_mp3(f)
-    audio = normalize(audio)
-    audio.export(output, format="mp3")
-    return output
 
 
 def choose_random_ayah():
@@ -161,8 +150,8 @@ def build_background():
     h, w = 1920, 1080
     noise = np.random.normal(loc=0.0, scale=1.0, size=(h, w)).astype(np.float32)
     noise = (noise - noise.min()) / (noise.max() - noise.min() + 1e-8)
-    rgb = (noise * 12).astype(np.uint8)
-    rgba = np.stack([rgb, rgb, rgb, np.full_like(rgb, 16, dtype=np.uint8)], axis=-1)
+    rgb = (noise * 7).astype(np.uint8)
+    rgba = np.stack([rgb, rgb, rgb, np.full_like(rgb, 12, dtype=np.uint8)], axis=-1)
     base = Rectangle(width=width, height=height, fill_color=background_color, fill_opacity=1, stroke_width=0)
     overlay = ImageMobject(rgba).set_resampling_algorithm(RESAMPLING_ALGORITHMS["nearest"])
     overlay.set(height=height, width=width)
@@ -207,8 +196,19 @@ def paginate(lines: list[str]) -> list[list[str]]:
 
 
 def make_block(lines: list[str]) -> VGroup:
-    texts = [Text(line, font=font_name, font_size=font_size_ayah, color=text_color) for line in lines]
-    return VGroup(*texts).arrange(DOWN, buff=line_spacing).move_to(ORIGIN)
+    texts = [Text(line, font=font_name, font_size=66, color=text_color) for line in lines]
+    return VGroup(*texts).arrange(DOWN, buff=0.32).move_to(ORIGIN)
+
+
+def corner_ornament(x: float, y: float, flip_x: float, flip_y: float) -> VGroup:
+    """Fine geometric corner detail, kept well outside the verse area."""
+    gold = "#b89a55"
+    horizontal = Line(ORIGIN, RIGHT * 1.0, color=gold, stroke_width=1.2).move_to([x + flip_x * 0.5, y, 0])
+    vertical = Line(ORIGIN, DOWN * 1.0, color=gold, stroke_width=1.2).move_to([x, y - flip_y * 0.5, 0])
+    diamond = Square(side_length=0.2, color=gold, stroke_width=1.1, fill_opacity=0)
+    diamond.rotate(PI / 4).move_to([x + flip_x * 0.22, y - flip_y * 0.22, 0])
+    dot = Dot([x + flip_x * 0.58, y - flip_y * 0.58, 0], radius=0.025, color=gold)
+    return VGroup(horizontal, vertical, diamond, dot).set_opacity(0.58)
 
 
 class QuranScene(Scene):
@@ -216,77 +216,66 @@ class QuranScene(Scene):
         self.camera.background_color = background_color
         self.add(build_background())
 
+        frame_x = config.frame_width / 2 - 0.5
+        frame_y = config.frame_height / 2 - 0.65
+        ornaments = VGroup(
+            corner_ornament(-frame_x, frame_y, 1, 1),
+            corner_ornament(frame_x, frame_y, -1, 1),
+            corner_ornament(-frame_x, -frame_y, 1, -1),
+            corner_ornament(frame_x, -frame_y, -1, -1),
+        )
+        self.add(ornaments)
+
+        particles = VGroup()
+        for _ in range(14):
+            particle = Dot(
+                [random.choice([-1, 1]) * random.uniform(3.0, 4.15), random.uniform(-6.5, 6.5), 0],
+                radius=random.uniform(0.012, 0.026),
+                color="#d8b86b",
+            ).set_opacity(random.uniform(0.25, 0.55))
+            particle.drift = random.uniform(0.015, 0.045)
+            particle.add_updater(lambda mob, dt: mob.shift(UP * mob.drift * dt))
+            particles.add(particle)
+        self.add(particles)
+
         surah, ayah, text, _ = choose_random_ayah()
         surah_name = get_surah_name(surah)
         ayah_label = to_arabic_indic_digits(str(ayah))
 
         audio_file = download_audio(surah, ayah, f"audio_{surah}_{ayah}.mp3")
-        audio_path = combine_audio([audio_file])
-        audio_length = MP3(audio_path).info.length
+        with open("selected_audio.txt", "w", encoding="utf-8") as selected_file:
+            selected_file.write(audio_file)
+        audio_length = MP3(audio_file).info.length
 
-        lines = wrap_text(text)
-        pages = paginate(lines)
+        block = make_block(wrap_text(text))
+        max_text_width = config.frame_width - 1.0
+        max_text_height = config.frame_height - 6.0
+        block.scale(min(1.0, max_text_width / block.width, max_text_height / block.height))
+        block.move_to(ORIGIN + DOWN * 0.1)
 
-        surah_title = Text(surah_name, font=font_name, font_size=90, color=WHITE)
-        ayah_ref = Text(f"آية {ayah_label}", font=font_name, font_size=42, color=GRAY_B)
-        intro = VGroup(surah_title, ayah_ref).arrange(DOWN, buff=0.4).move_to(ORIGIN)
-        self.play(FadeIn(intro, scale=0.92), run_time=0.6, rate_func=smooth)
-        self.wait(0.35)
-        self.play(FadeOut(intro, scale=1.05), run_time=0.4, rate_func=smooth)
+        surah_title = Text(surah_name, font=font_name, font_size=46, color="#d8b86b")
+        ayah_ref = Text(f"آية {ayah_label}", font=font_name, font_size=30, color="#b89a55")
+        heading = VGroup(surah_title, ayah_ref).arrange(DOWN, buff=0.18)
+        heading.move_to(UP * (config.frame_height / 2 - 2.1))
+        divider = Line(LEFT * 0.55, RIGHT * 0.55, color="#b89a55", stroke_width=1.2)
+        divider.next_to(heading, DOWN, buff=0.48)
+        footer = Text(
+            f"{surah_name}  •  {ayah_label}", font=font_name, font_size=26, color="#9a8758"
+        ).move_to(DOWN * (config.frame_height / 2 - 1.45))
 
-        per_page = max(audio_length / len(pages), 2.5)
-        track = progress_bar()
-        tracker = ValueTracker(0.0)
-        fill = always_redraw(lambda: Line(
-            track.get_start(),
-            track.get_start() + RIGHT * (track.get_length() * tracker.get_value()),
-            stroke_color=GOLD,
-            stroke_width=6,
-        ))
-        self.add(VGroup(track, fill))
-
-        for page_index, page in enumerate(pages, start=1):
-            block = make_block(page)
-            plate = RoundedRectangle(
-                corner_radius=0.3,
-                width=min(block.width + 1.2, config.frame_width - 0.4),
-                height=min(block.height + 1.0, config.frame_height - 4.0),
-                stroke_width=1,
-                stroke_color=GOLD_E,
-                stroke_opacity=0.4,
-                fill_color=BLACK,
-                fill_opacity=0.35,
-            ).move_to(block.get_center())
-
-            ayah_circle = ayah_number_circle(ayah_label)
-            ayah_circle.next_to(block, UP, buff=0.4)
-            glow = Circle(radius=0.42, color=GOLD, stroke_width=1, stroke_opacity=0.3, fill_opacity=0)
-            glow.move_to(ayah_circle.get_center())
-
-            info_text = Text(
-                f"{surah_name} ({to_arabic_indic_digits(str(surah))})",
-                font=font_name,
-                font_size=32,
-                color=GRAY,
-            ).next_to(block, DOWN, buff=0.8)
-            page_text = Text(
-                f"{to_arabic_indic_digits(str(page_index))}/{to_arabic_indic_digits(str(len(pages)))}",
-                font=font_name,
-                font_size=26,
-                color=GRAY_B,
-            ).to_edge(DOWN, buff=0.9)
-
-            self.play(
-                FadeIn(plate), FadeIn(block, scale=0.94), FadeIn(ayah_circle, scale=0.8),
-                FadeIn(glow, scale=0.7), FadeIn(info_text), FadeIn(page_text),
-                run_time=1, rate_func=smooth,
-            )
-            self.play(tracker.animate.set_value(page_index / len(pages)), run_time=per_page - 1, rate_func=linear)
-            self.play(
-                FadeOut(block, scale=1.03), FadeOut(plate), FadeOut(ayah_circle),
-                FadeOut(glow), FadeOut(info_text), FadeOut(page_text),
-                run_time=0.7, rate_func=smooth,
-            )
+        glow = VGroup(*[
+            Circle(radius=1.5 + index * 0.7, stroke_width=0, fill_color="#8e743d", fill_opacity=0.012)
+            for index in range(5)
+        ]).move_to(block.get_center())
+        self.add(glow)
+        entrance_duration = min(0.8, max(0.2, audio_length * 0.15))
+        self.play(
+            FadeIn(heading, shift=DOWN * 0.12), FadeIn(divider),
+            FadeIn(block, shift=UP * 0.12), FadeIn(footer),
+            run_time=entrance_duration, rate_func=smooth,
+        )
+        # Keep every word visible and motionless for the whole recitation.
+        self.wait(max(0.1, audio_length - entrance_duration) + 0.1)
 
 
 def render_one(output_path: str):
@@ -296,15 +285,15 @@ def render_one(output_path: str):
     subprocess.run(["manim", "-qh", os.path.abspath(__file__), "QuranScene"], check=True)
 
     video = glob.glob("media/videos/**/*QuranScene.mp4", recursive=True)[0]
-    intro_delay = 1.2
+    with open("selected_audio.txt", "r", encoding="utf-8") as selected_file:
+        selected_audio_file = selected_file.read().strip()
     subprocess.run([
         "ffmpeg", "-y",
         "-i", video,
-        "-itsoffset", str(intro_delay),
-        "-i", "audio.mp3",
+        "-i", selected_audio_file,
         "-vf", "scale=1080:1920",
         "-c:v", "libx264",
-        "-c:a", "aac",
+        "-c:a", "copy",
         "-shortest",
         output_path,
     ], check=True)
@@ -344,3 +333,4 @@ def render_one(output_path: str):
 
 if __name__ == "__main__":
     render_one(os.environ.get("OUTPUT_FILE", shorts_output))
+
