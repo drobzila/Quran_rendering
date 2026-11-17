@@ -59,8 +59,10 @@ info_color = "#5F6962"
 brand_name = "نسمات القرآن"
 reciter = "ar.husary"
 shorts_output = "Quran_Shorts.mp4"
-MIN_DURATION = 4
-MAX_DURATION = 20
+# Prefer complete, longer verses while keeping each Short concise.
+MIN_AYAH_CHARACTERS = 100
+MIN_DURATION = 8
+MAX_DURATION = 25
 USED_FILE = "used_ayahs.json"
 TEMP_AUDIO = "temp.mp3"
 
@@ -105,7 +107,8 @@ def choose_random_ayah():
     for s_idx, surah in enumerate(QURAN_DATA["data"]["surahs"], start=1):
         for a_idx, ayah in enumerate(surah["ayahs"], start=1):
             key = f"{s_idx}:{a_idx}"
-            if key not in used:
+            verse_text = " ".join(ayah["text"].split())
+            if key not in used and len(verse_text) >= MIN_AYAH_CHARACTERS:
                 candidates.append((s_idx, a_idx, ayah["text"]))
 
     random.shuffle(candidates)
