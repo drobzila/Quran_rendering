@@ -52,8 +52,11 @@ font_size_ayah = 72
 wrap_width_chars = 42
 max_lines_per_page = 5
 line_spacing = 0.5
-background_color = "#050505"
-text_color = "#f4e7c1"
+background_color = "#F2FFF7"
+text_color = "#1B5E20"
+pattern_color = "#2E7D32"
+info_color = "#5F6962"
+brand_name = "نسمات القرآن"
 reciter = "ar.husary"
 shorts_output = "Quran_Shorts.mp4"
 MIN_DURATION = 4
@@ -145,19 +148,28 @@ import numpy as np
 
 
 def build_background():
+    """Create the soft green-to-white vertical gradient used by Long_videos_Quran."""
     width = config.frame_width
     height = config.frame_height
-    h, w = 1920, 1080
-    noise = np.random.normal(loc=0.0, scale=1.0, size=(h, w)).astype(np.float32)
-    noise = (noise - noise.min()) / (noise.max() - noise.min() + 1e-8)
-    rgb = (noise * 7).astype(np.uint8)
-    rgba = np.stack([rgb, rgb, rgb, np.full_like(rgb, 12, dtype=np.uint8)], axis=-1)
-    base = Rectangle(width=width, height=height, fill_color=background_color, fill_opacity=1, stroke_width=0)
-    overlay = ImageMobject(rgba).set_resampling_algorithm(RESAMPLING_ALGORITHMS["nearest"])
-    overlay.set(height=height, width=width)
-    overlay.set_opacity(0.25)
-    vignette = Rectangle(width=width, height=height, fill_color=BLACK, fill_opacity=0.2, stroke_width=0)
-    return Group(base, overlay, vignette)
+    pixel_h = config.pixel_height
+    pixel_w = config.pixel_width
+    top = np.array([242, 255, 247], dtype=np.float32)
+    bottom = np.array([255, 255, 255], dtype=np.float32)
+    blend = np.linspace(0.0, 1.0, pixel_h, dtype=np.float32)[:, None, None]
+    rows = top[None, None, :] * (1.0 - blend) + bottom[None, None, :] * blend
+    rgb = np.broadcast_to(rows, (pixel_h, pixel_w, 3)).astype(np.uint8).copy()
+    return ImageMobject(rgb).set(height=height, width=width)
+
+
+def decorative_motif():
+    """Load the original Islamic SVG motif and rotate it very slowly behind the verse."""
+    motif = SVGMobject("assets/Tile-Derivative-9.svg")
+    motif.set_color(pattern_color)
+    motif.set_opacity(0.24)
+    motif.set(width=4.15)
+    motif.move_to(ORIGIN)
+    motif.add_updater(lambda mob, dt: mob.rotate(TAU * 0.02 * dt))
+    return motif
 
 
 def decorative_divider(width=2.0):
@@ -216,27 +228,8 @@ class QuranScene(Scene):
         self.camera.background_color = background_color
         self.add(build_background())
 
-        frame_x = config.frame_width / 2 - 0.5
-        frame_y = config.frame_height / 2 - 0.65
-        ornaments = VGroup(
-            corner_ornament(-frame_x, frame_y, 1, 1),
-            corner_ornament(frame_x, frame_y, -1, 1),
-            corner_ornament(-frame_x, -frame_y, 1, -1),
-            corner_ornament(frame_x, -frame_y, -1, -1),
-        )
-        self.add(ornaments)
-
-        particles = VGroup()
-        for _ in range(14):
-            particle = Dot(
-                [random.choice([-1, 1]) * random.uniform(3.0, 4.15), random.uniform(-6.5, 6.5), 0],
-                radius=random.uniform(0.012, 0.026),
-                color="#d8b86b",
-            ).set_opacity(random.uniform(0.25, 0.55))
-            particle.drift = random.uniform(0.015, 0.045)
-            particle.add_updater(lambda mob, dt: mob.shift(UP * mob.drift * dt))
-            particles.add(particle)
-        self.add(particles)
+        motif = decorative_motif()
+        self.add(motif)
 
         surah, ayah, text, _ = choose_random_ayah()
         surah_name = get_surah_name(surah)
@@ -253,18 +246,18 @@ class QuranScene(Scene):
         block.scale(min(1.0, max_text_width / block.width, max_text_height / block.height))
         block.move_to(ORIGIN + DOWN * 0.1)
 
-        surah_title = Text(surah_name, font=font_name, font_size=46, color="#d8b86b")
-        ayah_ref = Text(f"آية {ayah_label}", font=font_name, font_size=30, color="#b89a55")
+        surah_title = Text(surah_name, font=font_name, font_size=46, color="#1B5E20")
+        ayah_ref = Text(f"آية {ayah_label}", font=font_name, font_size=30, color="#2E7D32")
         heading = VGroup(surah_title, ayah_ref).arrange(DOWN, buff=0.18)
         heading.move_to(UP * (config.frame_height / 2 - 2.1))
-        divider = Line(LEFT * 0.55, RIGHT * 0.55, color="#b89a55", stroke_width=1.2)
+        divider = Line(LEFT * 0.55, RIGHT * 0.55, color="#2E7D32", stroke_width=1.5)
         divider.next_to(heading, DOWN, buff=0.48)
         footer = Text(
-            f"{surah_name}  •  {ayah_label}", font=font_name, font_size=26, color="#9a8758"
+            brand_name, font=font_name, font_size=30, color="#5F6962"
         ).move_to(DOWN * (config.frame_height / 2 - 1.45))
 
         glow = VGroup(*[
-            Circle(radius=1.5 + index * 0.7, stroke_width=0, fill_color="#8e743d", fill_opacity=0.012)
+            Circle(radius=1.5 + index * 0.7, stroke_width=0, fill_color="#2E7D32", fill_opacity=0.010)
             for index in range(5)
         ]).move_to(block.get_center())
         self.add(glow)
@@ -276,6 +269,7 @@ class QuranScene(Scene):
         )
         # Keep every word visible and motionless for the whole recitation.
         self.wait(max(0.1, audio_length - entrance_duration) + 0.1)
+        motif.clear_updaters()
 
 
 def render_one(output_path: str):
