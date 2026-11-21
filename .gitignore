@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Manim and generated media
+media/
+renderer_output/
+batch_output/
+*.mp4
+*.mov
+*.part
+
+# Temporary render state
+temp.mp3
+audio_*.mp3
+selected_audio.txt
+selected_ayah.json
+title.txt
+youtube_url.txt
+
+# Credentials and secrets
+.env
+.env.*
+!.env.example
+credentials.json
+client_secret.json
+token.json
+token.pkl
