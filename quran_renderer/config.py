@@ -3,12 +3,13 @@ import logging
 from pathlib import Path
 from manim import config
 ROOT_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT_DIR / "data"
+# Keep the existing data files at repository root so existing Actions and tools remain compatible.
+DATA_DIR = ROOT_DIR
 ASSETS_DIR = ROOT_DIR / "assets"
 FONT_DIR = ASSETS_DIR / "fonts"
-QURAN_FILE = DATA_DIR / "quran.json"
-USED_FILE = DATA_DIR / "used_ayahs.json"
-FONT_FILE = FONT_DIR / "Amiri-Regular.ttf"
+QURAN_FILE = ROOT_DIR / "quran.json"
+USED_FILE = ROOT_DIR / "used_ayahs.json"
+FONT_FILE = ROOT_DIR / "Amiri-Regular.ttf"
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("quran_renderer")
 config.frame_width, config.frame_height = 9, 16
