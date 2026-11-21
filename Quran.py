@@ -203,7 +203,34 @@ def progress_bar(total_width=None, y=None) -> Line:
 
 
 def wrap_text(text: str) -> list[str]:
-    return textwrap.wrap(" ".join(text.split()), width=wrap_width_chars)
+    """Wrap the complete Arabic ayah without ever splitting or dropping a word."""
+    normalized = " ".join(text.split())
+    if not normalized:
+        return []
+
+    max_width = config.frame_width - 1.0
+    words = normalized.split(" ")
+    lines = []
+    current_line = ""
+
+    for word in words:
+        candidate = f"{current_line} {word}".strip()
+        candidate_mobject = Text(candidate, font=font_name, font_size=66)
+
+        if current_line and candidate_mobject.width > max_width:
+            lines.append(current_line)
+            current_line = word
+        else:
+            current_line = candidate
+
+    if current_line:
+        lines.append(current_line)
+
+    # Safety check: the words and their order must remain exactly as supplied.
+    if " ".join(lines).split() != normalized.split():
+        raise ValueError("حدث اختلاف أثناء تنسيق الآية؛ تم إيقاف إنشاء الفيديو لمنع فقدان أي كلمة.")
+
+    return lines
 
 
 def paginate(lines: list[str]) -> list[list[str]]:
@@ -243,7 +270,15 @@ class QuranScene(Scene):
             selected_file.write(audio_file)
         audio_length = MP3(audio_file).info.length
 
-        block = make_block(wrap_text(text))
+        wrapped_lines = wrap_text(text)
+        block = make_block(wrapped_lines)
+
+        # Verify that the rendered lines contain every word from the source ayah.
+        source_words = " ".join(text.split()).split()
+        rendered_words = " ".join(wrapped_lines).split()
+        if rendered_words != source_words:
+            raise ValueError("الآية المعروضة لا تطابق النص الأصلي؛ تم إيقاف التصدير لتجنب حذف الكلمات.")
+
         max_text_width = config.frame_width - 1.0
         max_text_height = config.frame_height - 6.0
         block.scale(min(1.0, max_text_width / block.width, max_text_height / block.height))
@@ -330,4 +365,3 @@ def render_one(output_path: str):
 
 if __name__ == "__main__":
     render_one(os.environ.get("OUTPUT_FILE", shorts_output))
-
