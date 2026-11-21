@@ -1,59 +1,61 @@
 # Quran Rendering
 
-مشروع Python/Manim لإنشاء فيديوهات قصيرة للقرآن الكريم بصيغة عمودية 9:16، مع جلب التلاوة الصوتية وإظهار الآيات بتصميم مناسب لـ YouTube Shorts.
-
-## المميزات
-- إنشاء فيديوهات 1080×1920.
-- استخدام خط Amiri للنص العربي.
-- جلب التلاوات من AlQuran Cloud.
-- اختيار آيات لم تُستخدم سابقًا عبر `used_ayahs.json`.
-- معالجة الصوت باستخدام Mutagen وPydub.
-- إخراج الفيديو عبر Manim وFFmpeg.
-- دعم التوليد الفردي والدفعي ورفع الملفات.
+مشروع Python وManim لإنشاء فيديوهات قرآنية عمودية (9:16) بدقة 1080×1920، مع تلاوة صوتية وخيارات متعددة للألوان والزخارف.
 
 ## المتطلبات
-- Python 3.10+
+- Python 3.10 أو أحدث
 - FFmpeg
-- Manim
-- المكتبات الموجودة في `requirements.txt`.
+- Manim ومتطلبات Cairo/Pango النظامية
+- الحزم الموجودة في `requirements.txt`
 
 ## التثبيت
 ```bash
 git clone https://github.com/drobzila/Quran_rendering.git
 cd Quran_rendering
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-تأكد من توفر `ffmpeg` و`manim` في PATH.
+تأكد من توفر `ffmpeg` و`manim` في PATH، ومن تسجيل خط Amiri في النظام.
 
 ## التشغيل
+إنشاء نسختين بتصميمين وزخرفتين مختلفتين:
 ```bash
 python Quran.py
 ```
+إنشاء فيديو واحد:
+```bash
+RENDER_TWO=0 OUTPUT_FILE=Quran_Shorts.mp4 python Quran.py
+```
+إنشاء دفعة:
+```bash
+BATCH_COUNT=10 OUTPUT_DIR=batch_output python generate_batch.py
+```
 
-يمكن استخدام أدوات `generate_batch.py` وملفات الرفع الموجودة في المشروع حسب سير العمل المطلوب.
+## بنية محرك الرندر
+- `Quran.py`: نقطة تشغيل متوافقة مع الأوامر القديمة.
+- `quran_renderer/config.py`: إعدادات الفيديو، الخط، الألوان، والزخارف المتاحة.
+- `quran_renderer/data.py`: تحميل بيانات القرآن وحفظ الآيات التي نجح تصديرها.
+- `quran_renderer/audio.py`: تنزيل التلاوة وقراءة مدتها.
+- `quran_renderer/selection.py`: اختيار آية والتحقق من مدة التلاوة.
+- `quran_renderer/visuals.py`: الخلفيات والزخارف والعناصر المرئية.
+- `quran_renderer/scene.py`: مشهد Manim وتنسيق النص العربي.
+- `quran_renderer/render.py`: تشغيل Manim ودمج الصوت وإخراج MP4.
+- `generate_batch.py`: إنشاء مجموعة فيديوهات.
+- `renderer_api.py`: واجهة خدمة الرندر.
+- `upload.py` و`upload_drive.py`: الرفع إلى YouTube وGoogle Drive.
+- `bot.py`: إشعارات Telegram.
 
-## الملفات الرئيسية
-- `Quran.py` — منطق إنشاء مشاهد وفيديوهات القرآن.
-- `generate_batch.py` — التوليد الدفعي.
-- `quran.json` — بيانات القرآن المستخدمة في التوليد.
-- `used_ayahs.json` — الآيات التي تم استخدامها.
-- `Amiri-Regular.ttf` — الخط العربي المستخدم.
-- `upload.py` — رفع الفيديوهات.
-- `upload_drive.py` — التعامل مع Google Drive.
-- `requirements.txt` — متطلبات Python.
+## سلامة نص الآية
+تتحقق دالة تنسيق النص من أن الكلمات وترتيبها لم يتغيرا. كما لا تُسجل الآية في `used_ayahs.json` إلا بعد نجاح إنشاء ملف الفيديو النهائي، لتجنب استهلاك الآيات عند فشل الرندر.
 
-## ملاحظات
-الفيديو النهائي مصمم أساسًا للمحتوى العمودي القصير. تأكد من امتلاك الحقوق/الأذونات اللازمة للتلاوات والمواد المستخدمة عند النشر.
+## تخصيص التصميم
+يمكن تعديل `STYLE_PRESETS` و`MOTIF_KEYS` في `quran_renderer/config.py`. الأنماط الحالية: green وmidnight وroyal وocean وsand وslate. والزخارف: rosette وeight_point_star وnested_medallion وdiamond_lattice وflower وarchwork.
+
+## بيانات التشغيل
+تبقى ملفات `quran.json` و`used_ayahs.json` والخط `Amiri-Regular.ttf` في المسار الرئيسي في هذه المرحلة حتى لا تنكسر مسارات GitHub Actions وDocker الحالية.
+
+## GitHub Actions
+تم الإبقاء على مسارات Workflow الحالية وأوامرها كما هي؛ يستمر تشغيل `python Quran.py` و`python generate_batch.py` من جذر المشروع.
 
 ## الترخيص
 لم يتم تحديد ترخيص للمشروع بعد.
-
-
-## التصميم البصري الأخضر
-
-أُضيف إلى مشهد Manim تصميم بخلفية متدرجة من الأخضر الفاتح إلى الأبيض، مع زخرفة إسلامية SVG خضراء تدور ببطء خلف الآية. بقيت آلية اختيار الآيات والصوت ومنع التكرار وإنتاج الفيديو العمودي كما هي.
-
-- ملف الزخرفة: `assets/Tile-Derivative-9.svg`.
-- يجب تشغيل `python Quran.py` من مجلد المشروع الرئيسي حتى يتمكن Manim من العثور على ملف الزخرفة.
-- الخط المطلوب: Amiri، كما في الإعداد الأصلي.
