@@ -11,7 +11,12 @@ from quran_renderer.data import QURAN_DATA, load_used, save_used, get_surah_name
 from quran_renderer.audio import download_audio, get_duration
 from quran_renderer.selection import choose_random_ayah
 from quran_renderer.visuals import build_background, decorative_motif, decorative_divider, ayah_number_circle, progress_bar, corner_ornament
-from quran_renderer.scene import QuranScene, wrap_text, paginate, make_block
+from quran_renderer.scene import QuranScene as _QuranScene, wrap_text, paginate, make_block
+
+
+class QuranScene(_QuranScene):
+    """Expose the scene in this module so Manim can discover it."""
+    pass
 from quran_renderer.render import render_one, render_two_variants
 
 shorts_output = SHORTS_OUTPUT
