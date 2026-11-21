@@ -55,7 +55,7 @@ def render_two_variants() -> list[str]:
         SELECTED_AYAH_FILE.write_text(json.dumps({"surah":surah,"ayah":ayah,"text":text},ensure_ascii=False,indent=2),encoding="utf-8")
         logger.info("الفيديو %d: الآية %s:%s، النمط %s، الزخرفة %s",index,surah,ayah,STYLE_PRESETS[style_key]["name"],motif_key)
         video,audio,surah,ayah = _render_scene(style_key,motif_key)
-        output = str(ROOT_DIR / f"Quran_{index}_{style_key}.mp4")
+        output = str(ROOT_DIR / f"Quran_Shorts_{index}.mp4")
         _mux(video,audio,output)
         mark_ayah_used(surah,ayah)
         outputs.append(output)
@@ -64,5 +64,5 @@ def render_two_variants() -> list[str]:
             notify_exported(get_surah_name(surah),surah,ayah,text,float(MP3(audio).info.length),output)
         except Exception as exc:
             logger.warning("تعذر إرسال إشعار Telegram، لكن الفيديو تم تصديره بنجاح: %s",exc)
-    logger.info("اكتمل إنتاج نسختين مختلفتين.")
+    logger.info("اكتمل إنتاج نسختين مختلفتين بآيتين وتصميمين وزخرفتين.")
     return outputs
