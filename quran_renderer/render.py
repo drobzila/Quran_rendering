@@ -19,7 +19,7 @@ def _render_scene(style_key: str, motif_key: str) -> tuple[str, str, int, int]:
     token = uuid.uuid4().hex[:10]
     scene_name = f"QuranScene_{style_key}_{motif_key}_{token}"
     env = os.environ.copy(); env["QURAN_STYLE"] = style_key; env["QURAN_MOTIF"] = motif_key
-    scene_file = ROOT_DIR / "quran_renderer" / "scene.py"
+    scene_file = ROOT_DIR / "Quran.py"
     subprocess.run(["manim","-qh",str(scene_file),"QuranScene","-o",scene_name],check=True,cwd=ROOT_DIR,env=env)
     matches = glob.glob(str(ROOT_DIR / "media" / "videos" / "**" / f"*{scene_name}.mp4"),recursive=True)
     if not matches: raise FileNotFoundError(f"لم يتم العثور على فيديو Manim الناتج: {scene_name}")
