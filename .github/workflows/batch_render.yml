@@ -51,8 +51,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          pip install google-api-python-client google-auth google-auth-oauthlib
-
       - name: Register local font
         run: |
           mkdir -p ~/.fonts
