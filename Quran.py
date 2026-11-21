@@ -173,15 +173,57 @@ def build_background(style=None):
     return ImageMobject(rgb).set(height=config.frame_height, width=config.frame_width)
 
 
-def decorative_motif(style=None):
-    """Load the Islamic SVG motif and tint it to match the selected theme."""
+def decorative_motif(style=None, motif_key=None):
+    """Create a distinct geometric Islamic background ornament for each video."""
     style = style or STYLE_PRESETS["green"]
-    motif = SVGMobject("assets/Tile-Derivative-9.svg")
+    motif_key = motif_key or "rosette"
+    gold = style["gold"]
+
+    if motif_key == "rosette":
+        petals = VGroup(*[
+            Circle(radius=0.78).move_to(0.78 * np.array([np.cos(TAU * i / 8), np.sin(TAU * i / 8), 0]))
+            for i in range(8)
+        ])
+        motif = VGroup(Circle(radius=0.82), petals, Circle(radius=1.62), Circle(radius=1.78))
+    elif motif_key == "eight_point_star":
+        motif = VGroup(
+            RegularPolygon(n=8).scale(1.75),
+            Square(side_length=2.45).rotate(PI / 4),
+            Square(side_length=2.45),
+            Circle(radius=0.58),
+        )
+    elif motif_key == "nested_medallion":
+        motif = VGroup(
+            Circle(radius=1.8), Circle(radius=1.55),
+            RegularPolygon(n=12).scale(1.35),
+            RegularPolygon(n=6).scale(0.95),
+            RegularPolygon(n=6).scale(0.62).rotate(PI / 6),
+        )
+    elif motif_key == "diamond_lattice":
+        diamonds = VGroup(*[
+            Square(side_length=0.78).rotate(PI / 4).move_to([x, y, 0])
+            for x in (-1.05, 0, 1.05) for y in (-1.05, 0, 1.05)
+        ])
+        motif = VGroup(diamonds, Square(side_length=3.25).rotate(PI / 4))
+    elif motif_key == "flower":
+        petals = VGroup(*[
+            Ellipse(width=0.72, height=1.35).move_to(0.68 * np.array([np.cos(TAU * i / 8), np.sin(TAU * i / 8), 0])).rotate(TAU * i / 8)
+            for i in range(8)
+        ])
+        motif = VGroup(petals, Circle(radius=0.42), Circle(radius=1.55))
+    else:  # archwork
+        arches = VGroup(*[
+            Arc(radius=radius, start_angle=0, angle=PI, arc_center=ORIGIN).shift(DOWN * 0.15)
+            for radius in (0.75, 1.05, 1.35, 1.65)
+        ])
+        motif = VGroup(arches, Line(LEFT * 1.7, RIGHT * 1.7).shift(DOWN * 0.15))
+
     motif.set_color(style["accent"])
-    motif.set_opacity(0.24)
+    motif.set_stroke(width=2.0)
+    motif.set_opacity(0.19)
     motif.set(width=4.15)
     motif.move_to(ORIGIN)
-    motif.add_updater(lambda mob, dt: mob.rotate(TAU * 0.02 * dt))
+    motif.add_updater(lambda mob, dt: mob.rotate(TAU * 0.05 * dt))
     return motif
 
 
@@ -271,7 +313,8 @@ class QuranScene(Scene):
         self.camera.background_color = style["top"]
         self.add(build_background(style))
 
-        motif = decorative_motif(style)
+        motif_key = os.environ.get("QURAN_MOTIF", "rosette")
+        motif = decorative_motif(style, motif_key)
         self.add(motif)
 
         # Both output versions read the same selected ayah, so only the design changes.
@@ -350,19 +393,25 @@ def render_one(output_path: str):
 
 
 def render_two_variants():
-    """Choose one ayah and two different themes, then export two matching videos."""
-    surah, ayah, text, _ = choose_random_ayah()
-    with open("selected_ayah.json", "w", encoding="utf-8") as selected_file:
-        json.dump({"surah": surah, "ayah": ayah, "text": text}, selected_file, ensure_ascii=False, indent=2)
-
+    """Choose a different ayah and a different theme for each of the two videos."""
     non_green_styles = [key for key in STYLE_PRESETS if key != "green"]
     chosen_styles = random.sample(non_green_styles, 2)
-    logger.info("🎨 الأنماطان المختاران: %s و %s", STYLE_PRESETS[chosen_styles[0]]["name"], STYLE_PRESETS[chosen_styles[1]]["name"])
+    motif_keys = ["rosette", "eight_point_star", "nested_medallion", "diamond_lattice", "flower", "archwork"]
+    chosen_motifs = random.sample(motif_keys, 2)
 
     for index, style_key in enumerate(chosen_styles, start=1):
+        # A new ayah for each video
+        surah, ayah, text, _ = choose_random_ayah()
+        with open("selected_ayah.json", "w", encoding="utf-8") as selected_file:
+            json.dump({"surah": surah, "ayah": ayah, "text": text}, selected_file, ensure_ascii=False, indent=2)
+
+        motif_key = chosen_motifs[index - 1]
+        logger.info("🎨 الفيديو %d: آية %s:%s، النمط %s، الزخرفة %s", index, surah, ayah, STYLE_PRESETS[style_key]["name"], motif_key)
+
         env = os.environ.copy()
         env["QURAN_STYLE"] = style_key
-        scene_name = f"QuranScene_{style_key}"
+        env["QURAN_MOTIF"] = motif_key
+        scene_name = f"QuranScene_{style_key}_{motif_key}"
         subprocess.run(["manim", "-qh", os.path.abspath(__file__), "QuranScene", "-o", scene_name], check=True, env=env)
 
         matches = glob.glob(f"media/videos/**/*{scene_name}.mp4", recursive=True)
@@ -376,8 +425,7 @@ def render_two_variants():
             "-vf", "scale=1080:1920", "-c:v", "libx264", "-c:a", "copy",
             "-shortest", output_path,
         ], check=True)
-        logger.info("✅ تم إنتاج الفيديو %s بالنمط %s", output_path, STYLE_PRESETS[style_key]["name"])
-
+        logger.info("✅ تم إنتاج الفيديو %s", output_path)
         # Telegram notification remains optional; it never blocks a successful export.
         try:
             from bot import notify_exported
