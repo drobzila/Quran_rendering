@@ -37,8 +37,6 @@ jobs:
           sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev libglib2.0-dev pkg-config python3-dev fonts-dejavu-core
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install google-api-python-client google-auth google-auth-oauthlib
-
       - name: Check rendering dependencies
         run: |
          python -c "import numpy, PIL, manim; print('NumPy:', numpy.__version__); print('Pillow:', PIL.__version__); print('Manim:', manim.__version__)"
