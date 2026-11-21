@@ -66,6 +66,17 @@ MAX_DURATION = 25
 USED_FILE = "used_ayahs.json"
 TEMP_AUDIO = "temp.mp3"
 
+# Visual themes. The original green design remains available, alongside
+# several distinct palettes suitable for producing alternate versions.
+STYLE_PRESETS = {
+    "green": {"name": "الأخضر الإسلامي", "top": "#F2FFF7", "bottom": "#FFFFFF", "text": "#1B5E20", "accent": "#2E7D32", "info": "#5F6962", "gold": "#B89A55", "glow": "#2E7D32"},
+    "midnight": {"name": "الأزرق الليلي", "top": "#081A33", "bottom": "#142D4E", "text": "#F3F7FF", "accent": "#75B9F2", "info": "#C5D4E8", "gold": "#E6C77A", "glow": "#75B9F2"},
+    "royal": {"name": "البنفسجي الملكي", "top": "#211333", "bottom": "#43265D", "text": "#FFF7FF", "accent": "#D6A7F0", "info": "#E2D2EA", "gold": "#F0CF83", "glow": "#C58BE8"},
+    "ocean": {"name": "المحيط الفيروزي", "top": "#E8FAFC", "bottom": "#C9EEF1", "text": "#064B59", "accent": "#087E8B", "info": "#426A70", "gold": "#B78A43", "glow": "#39A8B5"},
+    "sand": {"name": "الذهبي الصحراوي", "top": "#FFF8E8", "bottom": "#EEDDBB", "text": "#513B20", "accent": "#9B7135", "info": "#76664F", "gold": "#B18A45", "glow": "#C49A50"},
+    "slate": {"name": "الرمادي الفاخر", "top": "#202833", "bottom": "#394653", "text": "#F4F1E8", "accent": "#B7C5D4", "info": "#D1D8DF", "gold": "#D6B56D", "glow": "#9EADBC"},
+}
+
 with open("quran.json", "r", encoding="utf-8") as f:
     QURAN_DATA = json.load(f)
 
@@ -150,24 +161,23 @@ def choose_random_ayah():
 import numpy as np
 
 
-def build_background():
-    """Create the soft green-to-white vertical gradient used by Long_videos_Quran."""
-    width = config.frame_width
-    height = config.frame_height
-    pixel_h = config.pixel_height
-    pixel_w = config.pixel_width
-    top = np.array([242, 255, 247], dtype=np.float32)
-    bottom = np.array([255, 255, 255], dtype=np.float32)
+def build_background(style=None):
+    """Build a vertical gradient using the selected visual theme."""
+    style = style or STYLE_PRESETS["green"]
+    pixel_h, pixel_w = config.pixel_height, config.pixel_width
+    top = np.array(color_to_rgb(style["top"]), dtype=np.float32) * 255
+    bottom = np.array(color_to_rgb(style["bottom"]), dtype=np.float32) * 255
     blend = np.linspace(0.0, 1.0, pixel_h, dtype=np.float32)[:, None, None]
     rows = top[None, None, :] * (1.0 - blend) + bottom[None, None, :] * blend
     rgb = np.broadcast_to(rows, (pixel_h, pixel_w, 3)).astype(np.uint8).copy()
-    return ImageMobject(rgb).set(height=height, width=width)
+    return ImageMobject(rgb).set(height=config.frame_height, width=config.frame_width)
 
 
-def decorative_motif():
-    """Load the original Islamic SVG motif and rotate it very slowly behind the verse."""
+def decorative_motif(style=None):
+    """Load the Islamic SVG motif and tint it to match the selected theme."""
+    style = style or STYLE_PRESETS["green"]
     motif = SVGMobject("assets/Tile-Derivative-9.svg")
-    motif.set_color(pattern_color)
+    motif.set_color(style["accent"])
     motif.set_opacity(0.24)
     motif.set(width=4.15)
     motif.move_to(ORIGIN)
@@ -237,8 +247,9 @@ def paginate(lines: list[str]) -> list[list[str]]:
     return [lines[i:i + max_lines_per_page] for i in range(0, len(lines), max_lines_per_page)]
 
 
-def make_block(lines: list[str]) -> VGroup:
-    texts = [Text(line, font=font_name, font_size=66, color=text_color) for line in lines]
+def make_block(lines: list[str], style=None) -> VGroup:
+    style = style or STYLE_PRESETS["green"]
+    texts = [Text(line, font=font_name, font_size=66, color=style["text"]) for line in lines]
     return VGroup(*texts).arrange(DOWN, buff=0.32).move_to(ORIGIN)
 
 
@@ -255,13 +266,21 @@ def corner_ornament(x: float, y: float, flip_x: float, flip_y: float) -> VGroup:
 
 class QuranScene(Scene):
     def construct(self):
-        self.camera.background_color = background_color
-        self.add(build_background())
+        style_key = os.environ.get("QURAN_STYLE", "green")
+        style = STYLE_PRESETS.get(style_key, STYLE_PRESETS["green"])
+        self.camera.background_color = style["top"]
+        self.add(build_background(style))
 
-        motif = decorative_motif()
+        motif = decorative_motif(style)
         self.add(motif)
 
-        surah, ayah, text, _ = choose_random_ayah()
+        # Both output versions read the same selected ayah, so only the design changes.
+        if os.path.exists("selected_ayah.json"):
+            with open("selected_ayah.json", "r", encoding="utf-8") as selected_file:
+                selected = json.load(selected_file)
+            surah, ayah, text = selected["surah"], selected["ayah"], selected["text"]
+        else:
+            surah, ayah, text, _ = choose_random_ayah()
         surah_name = get_surah_name(surah)
         ayah_label = to_arabic_indic_digits(str(ayah))
 
@@ -271,7 +290,7 @@ class QuranScene(Scene):
         audio_length = MP3(audio_file).info.length
 
         wrapped_lines = wrap_text(text)
-        block = make_block(wrapped_lines)
+        block = make_block(wrapped_lines, style)
 
         # Verify that the rendered lines contain every word from the source ayah.
         source_words = " ".join(text.split()).split()
@@ -284,18 +303,18 @@ class QuranScene(Scene):
         block.scale(min(1.0, max_text_width / block.width, max_text_height / block.height))
         block.move_to(ORIGIN + DOWN * 0.1)
 
-        surah_title = Text(surah_name, font=font_name, font_size=46, color="#1B5E20")
-        ayah_ref = Text(f"آية {ayah_label}", font=font_name, font_size=30, color="#2E7D32")
+        surah_title = Text(surah_name, font=font_name, font_size=46, color=style["text"])
+        ayah_ref = Text(f"آية {ayah_label}", font=font_name, font_size=30, color=style["accent"])
         heading = VGroup(surah_title, ayah_ref).arrange(DOWN, buff=0.18)
         heading.move_to(UP * (config.frame_height / 2 - 2.1))
-        divider = Line(LEFT * 0.55, RIGHT * 0.55, color="#2E7D32", stroke_width=1.5)
+        divider = Line(LEFT * 0.55, RIGHT * 0.55, color=style["gold"], stroke_width=1.8)
         divider.next_to(heading, DOWN, buff=0.48)
         footer = Text(
-            brand_name, font=font_name, font_size=30, color="#5F6962"
+            brand_name, font=font_name, font_size=30, color=style["info"]
         ).move_to(DOWN * (config.frame_height / 2 - 1.45))
 
         glow = VGroup(*[
-            Circle(radius=1.5 + index * 0.7, stroke_width=0, fill_color="#2E7D32", fill_opacity=0.010)
+            Circle(radius=1.5 + index * 0.7, stroke_width=0, fill_color=style["glow"], fill_opacity=0.010)
             for index in range(5)
         ]).move_to(block.get_center())
         self.add(glow)
@@ -311,57 +330,73 @@ class QuranScene(Scene):
 
 
 def render_one(output_path: str):
-    global shorts_output
-    shorts_output = output_path
+    """Render one video using QURAN_STYLE (or the original green theme)."""
+    style_key = os.environ.get("QURAN_STYLE", "green")
+    scene_name = f"QuranScene_{style_key}"
+    subprocess.run(["manim", "-qh", os.path.abspath(__file__), "QuranScene", "-o", scene_name], check=True)
 
-    subprocess.run(["manim", "-qh", os.path.abspath(__file__), "QuranScene"], check=True)
-
-    video = glob.glob("media/videos/**/*QuranScene.mp4", recursive=True)[0]
+    matches = glob.glob(f"media/videos/**/*{scene_name}.mp4", recursive=True)
+    if not matches:
+        raise FileNotFoundError(f"لم يتم العثور على فيديو Manim الناتج للنمط {style_key}")
+    video = max(matches, key=os.path.getmtime)
     with open("selected_audio.txt", "r", encoding="utf-8") as selected_file:
         selected_audio_file = selected_file.read().strip()
     subprocess.run([
-        "ffmpeg", "-y",
-        "-i", video,
-        "-i", selected_audio_file,
-        "-vf", "scale=1080:1920",
-        "-c:v", "libx264",
-        "-c:a", "copy",
-        "-shortest",
-        output_path,
+        "ffmpeg", "-y", "-i", video, "-i", selected_audio_file,
+        "-vf", "scale=1080:1920", "-c:v", "libx264", "-c:a", "copy",
+        "-shortest", output_path,
     ], check=True)
+    logger.info("✅ تم إنتاج الفيديو: %s", output_path)
 
-    logger.info(f"✅ تم إنتاج الفيديو: {output_path}")
 
-    # Telegram إشعار فقط، وليس خطوة مطلوبة لإكمال الرندر.
-    try:
-        from bot import notify_exported
+def render_two_variants():
+    """Choose one ayah and two different themes, then export two matching videos."""
+    surah, ayah, text, _ = choose_random_ayah()
+    with open("selected_ayah.json", "w", encoding="utf-8") as selected_file:
+        json.dump({"surah": surah, "ayah": ayah, "text": text}, selected_file, ensure_ascii=False, indent=2)
 
-        audio_files = glob.glob("audio_*.mp3")
-        selected_audio = max(audio_files, key=os.path.getmtime) if audio_files else None
-        surah = ayah = None
-        if selected_audio:
-            stem = os.path.splitext(os.path.basename(selected_audio))[0]
-            parts = stem.split("_")
-            if len(parts) == 3:
-                surah, ayah = int(parts[1]), int(parts[2])
+    non_green_styles = [key for key in STYLE_PRESETS if key != "green"]
+    chosen_styles = random.sample(non_green_styles, 2)
+    logger.info("🎨 الأنماطان المختاران: %s و %s", STYLE_PRESETS[chosen_styles[0]]["name"], STYLE_PRESETS[chosen_styles[1]]["name"])
 
-        text = ""
-        if os.path.exists("title.txt"):
-            with open("title.txt", "r", encoding="utf-8") as f:
-                text = f.read().strip()
+    for index, style_key in enumerate(chosen_styles, start=1):
+        env = os.environ.copy()
+        env["QURAN_STYLE"] = style_key
+        scene_name = f"QuranScene_{style_key}"
+        subprocess.run(["manim", "-qh", os.path.abspath(__file__), "QuranScene", "-o", scene_name], check=True, env=env)
 
-        if surah is not None and ayah is not None:
+        matches = glob.glob(f"media/videos/**/*{scene_name}.mp4", recursive=True)
+        if not matches:
+            raise FileNotFoundError(f"لم يتم العثور على فيديو النمط {style_key}")
+        video = max(matches, key=os.path.getmtime)
+        audio_file = f"audio_{surah}_{ayah}.mp3"
+        output_path = f"Quran_{index}_{style_key}.mp4"
+        subprocess.run([
+            "ffmpeg", "-y", "-i", video, "-i", audio_file,
+            "-vf", "scale=1080:1920", "-c:v", "libx264", "-c:a", "copy",
+            "-shortest", output_path,
+        ], check=True)
+        logger.info("✅ تم إنتاج الفيديو %s بالنمط %s", output_path, STYLE_PRESETS[style_key]["name"])
+
+        # Telegram notification remains optional; it never blocks a successful export.
+        try:
+            from bot import notify_exported
             notify_exported(
                 surah_name=get_surah_name(surah),
                 surah=surah,
                 ayah=ayah,
                 text=text,
-                duration=MP3(selected_audio).info.length if selected_audio else 0,
+                duration=MP3(audio_file).info.length,
                 output_path=output_path,
             )
-    except Exception as exc:
-        logger.warning("⚠️ تعذر إرسال إشعار Telegram، لكن الفيديو تم تصديره بنجاح: %s", exc)
+        except Exception as exc:
+            logger.warning("⚠️ تعذر إرسال إشعار Telegram، لكن الفيديو تم تصديره بنجاح: %s", exc)
+
+    logger.info("🎉 اكتمل إنتاج نسختين مختلفتين للآية نفسها.")
 
 
 if __name__ == "__main__":
-    render_one(os.environ.get("OUTPUT_FILE", shorts_output))
+    if os.environ.get("RENDER_TWO", "1") == "1":
+        render_two_variants()
+    else:
+        render_one(os.environ.get("OUTPUT_FILE", shorts_output))
