@@ -1,5 +1,4 @@
 """Modular Quran video rendering package."""
-from .config import STYLE_PRESETS
-from .render import render_one, render_two_variants
 
-__all__ = ["STYLE_PRESETS", "render_one", "render_two_variants"]
+# Keep package imports lightweight. Import concrete functions from their modules,
+# e.g. quran_renderer.render, to avoid loading Manim during config-only imports.
