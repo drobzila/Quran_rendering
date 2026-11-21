@@ -6,4 +6,7 @@ manim==0.22.0
 mutagen>=1.47.0
 numpy==2.2.6
 Pillow==11.3.0
-
+google-api-python-client>=2.0.0
+google-auth>=2.0.0
+google-auth-oauthlib>=1.0.0
+pytest>=8.0.0
