@@ -22,7 +22,7 @@ WRAP_WIDTH_CHARS = 42
 MAX_LINES_PER_PAGE = 5
 LINE_SPACING = 0.5
 BRAND_NAME = "نسمات القرآن"
-RECITER = "ar.husary"
+RECITERS = ["ar.husary", "ar.alafasy", "ar.abdulbasit", "ar.mahermuaiqly", "ar.minshawi", "ar.saoodshuraym"]\nRECITER = "ar.husary"
 SHORTS_OUTPUT = "Quran_Shorts.mp4"
 MIN_AYAH_CHARACTERS, MIN_DURATION, MAX_DURATION = 100, 8, 25
 TEMP_AUDIO = str(ROOT_DIR / "temp.mp3")
