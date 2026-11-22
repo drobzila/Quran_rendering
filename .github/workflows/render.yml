@@ -143,11 +143,22 @@ jobs:
               with open("youtube_url.txt", encoding="utf-8") as f:
                   url = f.read().strip()
 
+          title = ""
+          title_file = "title_1.txt"
+          if os.path.exists(title_file):
+              with open(title_file, encoding="utf-8") as f:
+                  title = f.read().strip()
+
           text = (
-              "🎬 تم إنشاء وجدولة الفيديو الأول بنجاح!\n\n"
-              "🇩🇿 موعد النشر (الجزائر): " + os.environ["PUBLISH_LOCAL"] + "\n"
-              "🌍 موعد النشر (UTC): " + os.environ["PUBLISH_AT"] + "\n"
-              "🔗 " + (url or "تمت الجدولة بنجاح")
+              "🌿 نسمات القرآن\n"
+              "━━━━━━━━━━━━━━━━━━\n"
+              "✨ تمت جدولة تلاوة قرآنية جديدة!\n\n"
+              + ("🎬 " + title + "\n\n" if title else "")
+              + "📅 موعد النشر بتوقيت الجزائر: " + os.environ["PUBLISH_LOCAL"] + "\n"
+              + "🌍 " + os.environ["PUBLISH_AT"] + " (UTC)\n\n"
+              + "🔗 " + (url or "تمت الجدولة بنجاح") + "\n\n"
+              + "🤍 اللهم اجعل القرآن نوراً وطمأنينة\n"
+              + "🔔 نسمات القرآن"
           )
 
           data = urllib.parse.urlencode({"chat_id": chat, "text": text}).encode()
@@ -190,11 +201,22 @@ jobs:
               with open("youtube_url.txt", encoding="utf-8") as f:
                   url = f.read().strip()
 
+          title = ""
+          title_file = "title_2.txt"
+          if os.path.exists(title_file):
+              with open(title_file, encoding="utf-8") as f:
+                  title = f.read().strip()
+
           text = (
-              "🎬 تم إنشاء وجدولة الفيديو الثاني بنجاح!\n\n"
-              "🇩🇿 موعد النشر (الجزائر): " + os.environ["PUBLISH_LOCAL"] + "\n"
-              "🌍 موعد النشر (UTC): " + os.environ["PUBLISH_AT"] + "\n"
-              "🔗 " + (url or "تمت الجدولة بنجاح")
+              "🌿 نسمات القرآن\n"
+              "━━━━━━━━━━━━━━━━━━\n"
+              "✨ تمت جدولة تلاوة قرآنية جديدة!\n\n"
+              + ("🎬 " + title + "\n\n" if title else "")
+              + "📅 موعد النشر بتوقيت الجزائر: " + os.environ["PUBLISH_LOCAL"] + "\n"
+              + "🌍 " + os.environ["PUBLISH_AT"] + " (UTC)\n\n"
+              + "🔗 " + (url or "تمت الجدولة بنجاح") + "\n\n"
+              + "🤍 اللهم اجعل القرآن نوراً وطمأنينة\n"
+              + "🔔 نسمات القرآن"
           )
 
           data = urllib.parse.urlencode({"chat_id": chat, "text": text}).encode()
