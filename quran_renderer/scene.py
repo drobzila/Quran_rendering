@@ -14,7 +14,7 @@ def wrap_text(text: str) -> list[str]:
     """Wrap the complete ayah without splitting, reordering, or dropping words."""
     normalized = " ".join(text.split())
     if not normalized: return []
-    max_width = manim_manim_config.frame_width - 1.0
+    max_width = manim_config.frame_width - 1.0
     lines, current = [], ""
     for word in normalized.split(" "):
         candidate = f"{current} {word}".strip()
