@@ -16,33 +16,29 @@ def notify_exported(
     output_path: str,
     title: str = "",
 ):
-    """Send a non-blocking-in-spirit notification about an exported video.
-
-    This function is intentionally best-effort: Telegram failure must never
-    make the Quran rendering job fail.
-    """
+    """Send a best-effort notification when a Quran video is exported."""
     if not BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("ℹ️ Telegram notification skipped: BOT_TOKEN/TELEGRAM_CHAT_ID not set.")
         return False
 
     message = (
-        "🎬 تم تصدير فيديو جديد بنجاح!\n\n"
-        f"🕌 السورة: {surah_name} ({surah})\n"
+        "🌿 نسمات القرآن\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "✨ بفضل الله، تم تجهيز تلاوة قرآنية جديدة!\n\n"
+        f"📖 السورة: {surah_name}\n"
         f"🔢 الآية: {ayah}\n"
-        f"⏱ مدة التلاوة: {duration:.2f} ثانية\n\n"
-        + (f"📝 العنوان: {title}\n" if title else "")
-        + "\n"
-        f"﴿ {text.strip()} ﴾\n\n"
-        f"📁 الملف: {os.path.basename(output_path)}\n\n"
-        "ℹ️ هذا إشعار فقط؛ لا يحتاج الفيديو إلى أي موافقة من Telegram."
+        f"⏱ مدة التلاوة: {duration:.1f} ثانية\n\n"
+        + (f"🎬 عنوان الفيديو:\n{title}\n\n" if title else "")
+        + f"﴿ {text.strip()} ﴾\n\n"
+        f"📂 الملف: {os.path.basename(output_path)}\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "🤍 اللهم اجعل القرآن نوراً لقلوبنا.\n"
+        "🔔 نسمات القرآن | ذكرٌ وطمأنينة"
     )
 
     response = requests.post(
         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        json={
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": message,
-        },
+        json={"chat_id": TELEGRAM_CHAT_ID, "text": message},
         timeout=15,
     )
     response.raise_for_status()
@@ -52,21 +48,22 @@ def notify_exported(
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 البوت يعمل بنجاح.\n\n"
-        "سيتم إرسال إشعار لك تلقائيًا عند تصدير فيديو جديد."
+        "🌿 أهلاً بك في نسمات القرآن\n\n"
+        "🤍 نسعى لنشر آيات القرآن الكريم لتكون ذكرى وطمأنينة.\n"
+        "سيصلك إشعار عند تجهيز فيديو جديد."
     )
 
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🏓 Pong")
+    await update.message.reply_text("🏓 البوت متصل ويعمل.")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "/start\n"
-        "/ping\n"
-        "/help\n\n"
-        "📨 Telegram هنا للإشعارات فقط، ولا يوقف عملية الرندر."
+        "/start — التعريف بالبوت\n"
+        "/ping — اختبار الاتصال\n"
+        "/help — المساعدة\n\n"
+        "📨 البوت مخصص لإشعارات مشروع نسمات القرآن."
     )
 
 
