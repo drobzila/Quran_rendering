@@ -8,9 +8,13 @@ def load_creds():
     with open("token.pkl", "rb") as f: return pickle.load(f)
 
 def get_title():
-    if os.path.exists("title.txt"):
-        with open("title.txt", "r", encoding="utf-8") as f: return f.read().strip()
-    return "آية قرآنية قصيرة ❤️ #shorts"
+    title_file = os.environ.get("TITLE_FILE", "title.txt")
+    if os.path.exists(title_file):
+        with open(title_file, "r", encoding="utf-8") as f:
+            title = f.read().strip()
+            if title:
+                return title
+    raise FileNotFoundError(f"ملف عنوان الفيديو غير موجود أو فارغ: {title_file}")
 
 def upload_video(file_path, title, description, publish_at=None):
     if not os.path.exists(file_path): raise FileNotFoundError(file_path)
@@ -23,6 +27,7 @@ def upload_video(file_path, title, description, publish_at=None):
     response = youtube.videos().insert(part="snippet,status", body={"snippet":{"title":title,"description":description,"categoryId":"22"},"status":status}, media_body=MediaFileUpload(file_path, resumable=True)).execute()
     url = "https://www.youtube.com/watch?v=" + response["id"]
     print("Scheduled:", status.get("publishAt", "public now"))
+    print("Title:", title)
     print(url)
     with open("youtube_url.txt", "w", encoding="utf-8") as f: f.write(url)
     return response["id"], url
