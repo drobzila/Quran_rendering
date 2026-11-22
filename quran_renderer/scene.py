@@ -40,7 +40,8 @@ class QuranScene(Scene):
         style_key = os.environ.get("QURAN_STYLE","green")
         style = STYLE_PRESETS.get(style_key,STYLE_PRESETS["green"])
         self.camera.background_color = style["top"]
-        self.add(build_background(style))\n        self.add(decorative_frame(style))
+        self.add(build_background(style))
+        self.add(decorative_frame(style))
         motif = decorative_motif(style,os.environ.get("QURAN_MOTIF","rosette"))
         self.add(motif)
         if SELECTED_AYAH_FILE.exists():
