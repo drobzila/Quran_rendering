@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 from mutagen.mp3 import MP3
 from .audio import download_audio
-from .config import ROOT_DIR, SELECTED_AYAH_FILE, SELECTED_AUDIO_FILE, STYLE_PRESETS, MOTIF_KEYS, SHORTS_OUTPUT, logger
+from .config import ROOT_DIR, SELECTED_AYAH_FILE, SELECTED_AUDIO_FILE, STYLE_PRESETS, MOTIF_KEYS, SHORTS_OUTPUT, RECITERS, logger
 from .data import get_surah_name, mark_ayah_used
 from .scene import QuranScene
 from .selection import choose_random_ayah
@@ -18,7 +18,7 @@ def _render_scene(style_key: str, motif_key: str) -> tuple[str, str, int, int]:
     surah, ayah = int(selected["surah"]), int(selected["ayah"])
     token = uuid.uuid4().hex[:10]
     scene_name = f"QuranScene_{style_key}_{motif_key}_{token}"
-    env = os.environ.copy(); env["QURAN_STYLE"] = style_key; env["QURAN_MOTIF"] = motif_key
+    env = os.environ.copy(); env["QURAN_STYLE"] = style_key; env["QURAN_MOTIF"] = motif_key; env["QURAN_RECITER"] = reciter
     scene_file = ROOT_DIR / "Quran.py"
     subprocess.run(["manim","-qh",str(scene_file),"QuranScene","-o",scene_name],check=True,cwd=ROOT_DIR,env=env)
     matches = glob.glob(str(ROOT_DIR / "media" / "videos" / "**" / f"*{scene_name}.mp4"),recursive=True)
@@ -50,7 +50,7 @@ def render_two_variants() -> list[str]:
     styles = random.sample([key for key in STYLE_PRESETS if key != "green"],2)
     motifs = random.sample(MOTIF_KEYS,2)
     outputs = []
-    for index,(style_key,motif_key) in enumerate(zip(styles,motifs),start=1):
+    for index,(style_key,motif_key,reciter) in enumerate(zip(styles,motifs,reciters),start=1):
         surah,ayah,text,_ = choose_random_ayah()
         SELECTED_AYAH_FILE.write_text(json.dumps({"surah":surah,"ayah":ayah,"text":text},ensure_ascii=False,indent=2),encoding="utf-8")
         logger.info("الفيديو %d: الآية %s:%s، النمط %s، الزخرفة %s",index,surah,ayah,STYLE_PRESETS[style_key]["name"],motif_key)
