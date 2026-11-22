@@ -7,7 +7,7 @@ from .audio import download_audio
 from .config import BRAND_NAME, FONT_NAME, SELECTED_AYAH_FILE, SELECTED_AUDIO_FILE, STYLE_PRESETS, MAX_LINES_PER_PAGE
 from .data import get_surah_name, to_arabic_indic_digits
 from .selection import choose_random_ayah
-from .visuals import build_background, decorative_motif
+from .visuals import build_background, decorative_motif, decorative_frame
 
 def wrap_text(text: str) -> list[str]:
     """Wrap the complete ayah without splitting, reordering, or dropping words."""
@@ -39,7 +39,7 @@ class QuranScene(Scene):
         style_key = os.environ.get("QURAN_STYLE","green")
         style = STYLE_PRESETS.get(style_key,STYLE_PRESETS["green"])
         self.camera.background_color = style["top"]
-        self.add(build_background(style))
+        self.add(build_background(style))\n        self.add(decorative_frame(style))
         motif = decorative_motif(style,os.environ.get("QURAN_MOTIF","rosette"))
         self.add(motif)
         if SELECTED_AYAH_FILE.exists():
