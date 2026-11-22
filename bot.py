@@ -14,6 +14,7 @@ def notify_exported(
     text: str,
     duration: float,
     output_path: str,
+    title: str = "",
 ):
     """Send a non-blocking-in-spirit notification about an exported video.
 
@@ -29,6 +30,8 @@ def notify_exported(
         f"🕌 السورة: {surah_name} ({surah})\n"
         f"🔢 الآية: {ayah}\n"
         f"⏱ مدة التلاوة: {duration:.2f} ثانية\n\n"
+        + (f"📝 العنوان: {title}\n" if title else "")
+        + "\n"
         f"﴿ {text.strip()} ﴾\n\n"
         f"📁 الملف: {os.path.basename(output_path)}\n\n"
         "ℹ️ هذا إشعار فقط؛ لا يحتاج الفيديو إلى أي موافقة من Telegram."

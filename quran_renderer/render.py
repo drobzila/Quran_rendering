@@ -71,7 +71,7 @@ def render_two_variants() -> list[str]:
         outputs.append(output)
         try:
             from bot import notify_exported
-            notify_exported(get_surah_name(surah),surah,ayah,text,float(MP3(audio).info.length),output)
+            notify_exported(get_surah_name(surah),surah,ayah,text,float(MP3(audio).info.length),output,title)
         except Exception as exc:
             logger.warning("تعذر إرسال إشعار Telegram، لكن الفيديو تم تصديره بنجاح: %s",exc)
     logger.info("اكتمل إنتاج نسختين مختلفتين بآيتين وتصميمين وزخرفتين.")
