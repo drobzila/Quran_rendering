@@ -13,7 +13,7 @@ from .data import get_surah_name, mark_ayah_used
 from .scene import QuranScene
 from .selection import choose_random_ayah
 
-def _render_scene(style_key: str, motif_key: str) -> tuple[str, str, int, int]:
+def _render_scene(style_key: str, motif_key: str, reciter: str) -> tuple[str, str, int, int]:
     selected = json.loads(SELECTED_AYAH_FILE.read_text(encoding="utf-8"))
     surah, ayah = int(selected["surah"]), int(selected["ayah"])
     token = uuid.uuid4().hex[:10]
@@ -39,7 +39,7 @@ def render_one(output_path: str = SHORTS_OUTPUT) -> str:
     style_key = os.environ.get("QURAN_STYLE","green")
     if style_key not in STYLE_PRESETS: style_key = "green"
     motif_key = os.environ.get("QURAN_MOTIF","rosette")
-    video,audio,surah,ayah = _render_scene(style_key,motif_key)
+    video,audio,surah,ayah = _render_scene(style_key,motif_key,os.environ.get("QURAN_RECITER", "ar.husary"))
     _mux(video,audio,output_path)
     mark_ayah_used(surah,ayah)
     logger.info("تم إنتاج الفيديو: %s",output_path)
@@ -49,12 +49,13 @@ def render_two_variants() -> list[str]:
     """Create two videos using different non-green palettes and different ornaments."""
     styles = random.sample([key for key in STYLE_PRESETS if key != "green"],2)
     motifs = random.sample(MOTIF_KEYS,2)
+    reciters = random.sample(RECITERS,2)
     outputs = []
     for index,(style_key,motif_key,reciter) in enumerate(zip(styles,motifs,reciters),start=1):
         surah,ayah,text,_ = choose_random_ayah()
         SELECTED_AYAH_FILE.write_text(json.dumps({"surah":surah,"ayah":ayah,"text":text},ensure_ascii=False,indent=2),encoding="utf-8")
         logger.info("الفيديو %d: الآية %s:%s، النمط %s، الزخرفة %s",index,surah,ayah,STYLE_PRESETS[style_key]["name"],motif_key)
-        video,audio,surah,ayah = _render_scene(style_key,motif_key)
+        video,audio,surah,ayah = _render_scene(style_key,motif_key,reciter)
         output = str(ROOT_DIR / f"Quran_Shorts_{index}.mp4")
         _mux(video,audio,output)
         mark_ayah_used(surah,ayah)
