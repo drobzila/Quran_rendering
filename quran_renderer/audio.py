@@ -13,10 +13,12 @@ RECITER_NAMES = {
 }
 
 TITLE_TEMPLATES = [
-    "{surah} ﴿آية {ayah}﴾ 🤍 بصوت {reciter}",
-    "تلاوة خاشعة من {surah} ✨ بصوت {reciter}",
-    "استمع وتدبر 🌿 {surah} - آية {ayah} | {reciter}",
-    "سكينة وطمأنينة مع {surah} 🤍 {reciter}",
+    "🌿 {surah} | الآية {ayah} — تلاوة تشرح الصدر",
+    "🤍 آية من سورة {surah} ({ayah}) | لحظات من السكينة",
+    "✨ تدبروا هذه الآية | {surah} — {ayah}",
+    "📖 {surah}، الآية {ayah} | تلاوة هادئة للقلب",
+    "طمأنينة بكلام الله 🌙 | {surah} آية {ayah}",
+    "💚 من نور القرآن | سورة {surah} — الآية {ayah}",
 ]
 
 
@@ -41,7 +43,6 @@ def get_duration(filename: str) -> float:
 
 def build_title(surah_name: str, ayah: int, reciter_id: str) -> str:
     surah = " ".join(surah_name.split())
-    reciter = RECITER_NAMES.get(reciter_id, "")
-    title = random.choice(TITLE_TEMPLATES).format(surah=surah, ayah=ayah, reciter=reciter)
-    suffix = " #Shorts"
+    title = random.choice(TITLE_TEMPLATES).format(surah=surah, ayah=ayah)
+    suffix = " #قرآن #Shorts"
     return title[: 100 - len(suffix)].strip() + suffix
