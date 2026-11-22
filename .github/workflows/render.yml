@@ -116,6 +116,7 @@ jobs:
       - name: Upload and schedule video 1
         env:
           VIDEO_FILE: Quran_Shorts_1.mp4
+          TITLE_FILE: title_1.txt
           PUBLISH_AT: ${{ steps.times.outputs.publish1 }}
         run: python upload.py
 
@@ -174,6 +175,7 @@ jobs:
       - name: Upload and schedule video 2
         env:
           VIDEO_FILE: Quran_Shorts_2.mp4
+          TITLE_FILE: title_2.txt
           PUBLISH_AT: ${{ steps.times.outputs.publish2 }}
         run: python upload.py
 
