@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import os
 from manim import *
+from manim import config as manim_config
 from mutagen.mp3 import MP3
 from .audio import download_audio
 from .config import BRAND_NAME, FONT_NAME, SELECTED_AYAH_FILE, SELECTED_AUDIO_FILE, STYLE_PRESETS, MAX_LINES_PER_PAGE
@@ -13,7 +14,7 @@ def wrap_text(text: str) -> list[str]:
     """Wrap the complete ayah without splitting, reordering, or dropping words."""
     normalized = " ".join(text.split())
     if not normalized: return []
-    max_width = config.frame_width - 1.0
+    max_width = manim_manim_config.frame_width - 1.0
     lines, current = [], ""
     for word in normalized.split(" "):
         candidate = f"{current} {word}".strip()
@@ -56,7 +57,7 @@ class QuranScene(Scene):
         if " ".join(wrapped).split() != " ".join(text.split()).split():
             raise ValueError("الآية المعروضة لا تطابق النص الأصلي؛ تم إيقاف التصدير لتجنب حذف الكلمات.")
         block = make_block(wrapped,style)
-        max_width,max_height = config.frame_width-1.0,config.frame_height-6.0
+        max_width,max_height = config.frame_width-1.0,manim_config.frame_height-6.0
         block.scale(min(1.0,max_width/block.width,max_height/block.height)).move_to(ORIGIN+DOWN*.1)
         heading = VGroup(
             Text(surah_name,font=FONT_NAME,font_size=46,color=style["text"]),
