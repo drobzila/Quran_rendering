@@ -7,7 +7,7 @@ import subprocess
 import uuid
 from pathlib import Path
 from mutagen.mp3 import MP3
-from .audio import download_audio
+from .audio import download_audio, build_title
 from .config import ROOT_DIR, SELECTED_AYAH_FILE, SELECTED_AUDIO_FILE, STYLE_PRESETS, MOTIF_KEYS, SHORTS_OUTPUT, RECITERS, logger
 from .data import get_surah_name, mark_ayah_used
 from .scene import QuranScene
@@ -39,8 +39,13 @@ def render_one(output_path: str = SHORTS_OUTPUT) -> str:
     style_key = os.environ.get("QURAN_STYLE","green")
     if style_key not in STYLE_PRESETS: style_key = "green"
     motif_key = os.environ.get("QURAN_MOTIF","rosette")
-    video,audio,surah,ayah = _render_scene(style_key,motif_key,os.environ.get("QURAN_RECITER", "ar.husary"))
+    reciter = os.environ.get("QURAN_RECITER", "ar.husary")
+    video,audio,surah,ayah = _render_scene(style_key,motif_key,reciter)
     _mux(video,audio,output_path)
+    (ROOT_DIR / "title.txt").write_text(
+        build_title(get_surah_name(surah), ayah, reciter),
+        encoding="utf-8",
+    )
     mark_ayah_used(surah,ayah)
     logger.info("تم إنتاج الفيديو: %s",output_path)
     return output_path
@@ -58,6 +63,10 @@ def render_two_variants() -> list[str]:
         video,audio,surah,ayah = _render_scene(style_key,motif_key,reciter)
         output = str(ROOT_DIR / f"Quran_Shorts_{index}.mp4")
         _mux(video,audio,output)
+        title = build_title(get_surah_name(surah), ayah, reciter)
+        (ROOT_DIR / f"title_{index}.txt").write_text(title, encoding="utf-8")
+        if index == 1:
+            (ROOT_DIR / "title.txt").write_text(title, encoding="utf-8")
         mark_ayah_used(surah,ayah)
         outputs.append(output)
         try:
