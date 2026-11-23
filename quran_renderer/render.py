@@ -76,3 +76,31 @@ def render_two_variants() -> list[str]:
             logger.warning("تعذر إرسال إشعار Telegram، لكن الفيديو تم تصديره بنجاح: %s",exc)
     logger.info("اكتمل إنتاج نسختين مختلفتين بآيتين وتصميمين وزخرفتين.")
     return outputs
+
+
+def render_four_variants() -> list[str]:
+    """Create four videos with distinct palettes, ornaments and reciters."""
+    styles = random.sample(list(STYLE_PRESETS), 4)
+    motifs = random.sample(MOTIF_KEYS, 4)
+    reciters = random.sample(RECITERS, 4)
+    outputs = []
+    for index, (style_key, motif_key, reciter) in enumerate(zip(styles, motifs, reciters), start=1):
+        surah, ayah, text, _ = choose_random_ayah()
+        SELECTED_AYAH_FILE.write_text(json.dumps({"surah": surah, "ayah": ayah, "text": text}, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info("الفيديو %d: الآية %s:%s، النمط %s، الزخرفة %s", index, surah, ayah, STYLE_PRESETS[style_key]["name"], motif_key)
+        video, audio, surah, ayah = _render_scene(style_key, motif_key, reciter)
+        output = str(ROOT_DIR / f"Quran_Shorts_{index}.mp4")
+        _mux(video, audio, output)
+        title = build_title(get_surah_name(surah), ayah, reciter)
+        (ROOT_DIR / f"title_{index}.txt").write_text(title, encoding="utf-8")
+        if index == 1:
+            (ROOT_DIR / "title.txt").write_text(title, encoding="utf-8")
+        mark_ayah_used(surah, ayah)
+        outputs.append(output)
+        try:
+            from bot import notify_exported
+            notify_exported(get_surah_name(surah), surah, ayah, text, float(MP3(audio).info.length), output, title)
+        except Exception as exc:
+            logger.warning("تعذر إرسال إشعار Telegram، لكن الفيديو تم تصديره بنجاح: %s", exc)
+    logger.info("اكتمل إنتاج أربعة فيديوهات بآيات وتصاميم وزخارف مختلفة.")
+    return outputs
