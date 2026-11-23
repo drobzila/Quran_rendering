@@ -1,6 +1,5 @@
 from __future__ import annotations
 import os
-import random
 import requests
 from mutagen.mp3 import MP3
 from .config import RECITER
@@ -11,16 +10,6 @@ RECITER_NAMES = {
     "ar.minshawi": "المنشاوي",
     "ar.mahermuaiqly": "ماهر المعيقلي",
 }
-
-TITLE_TEMPLATES = [
-    "🌿 {surah} | الآية {ayah} — تلاوة تشرح الصدر",
-    "🤍 آية من سورة {surah} ({ayah}) | لحظات من السكينة",
-    "✨ تدبروا هذه الآية | {surah} — {ayah}",
-    "📖 {surah}، الآية {ayah} | تلاوة هادئة للقلب",
-    "طمأنينة بكلام الله 🌙 | {surah} آية {ayah}",
-    "💚 من نور القرآن | سورة {surah} — الآية {ayah}",
-]
-
 
 def download_audio(surah: int, ayah: int, filename: str) -> str:
     reciter = os.environ.get("QURAN_RECITER", RECITER)
@@ -42,7 +31,8 @@ def get_duration(filename: str) -> float:
 
 
 def build_title(surah_name: str, ayah: int, reciter_id: str) -> str:
+    """Generate a consistent title format for both daily videos."""
     surah = " ".join(surah_name.split())
-    title = random.choice(TITLE_TEMPLATES).format(surah=surah, ayah=ayah)
+    title = f"🌿 سورة {surah} | الآية {ayah} — تلاوة تشرح الصدر"
     suffix = " #قرآن #Shorts"
     return title[: 100 - len(suffix)].strip() + suffix
