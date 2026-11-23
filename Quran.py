@@ -17,12 +17,14 @@ from quran_renderer.scene import QuranScene as _QuranScene, wrap_text, paginate,
 class QuranScene(_QuranScene):
     """Expose the scene in this module so Manim can discover it."""
     pass
-from quran_renderer.render import render_one, render_two_variants
+from quran_renderer.render import render_one, render_two_variants, render_four_variants
 
 shorts_output = SHORTS_OUTPUT
 
 if __name__ == "__main__":
-    if os.environ.get("RENDER_TWO", "1") == "1":
+    if os.environ.get("RENDER_COUNT", "0") == "4":
+        render_four_variants()
+    elif os.environ.get("RENDER_TWO", "1") == "1":
         render_two_variants()
     else:
         render_one(os.environ.get("OUTPUT_FILE", shorts_output))
