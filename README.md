@@ -48,8 +48,10 @@ BATCH_COUNT=10 OUTPUT_DIR=batch_output python generate_batch.py
 ## سلامة نص الآية
 تتحقق دالة تنسيق النص من أن الكلمات وترتيبها لم يتغيرا. كما لا تُسجل الآية في `used_ayahs.json` إلا بعد نجاح إنشاء ملف الفيديو النهائي، لتجنب استهلاك الآيات عند فشل الرندر.
 
-## تخصيص التصميم
-يمكن تعديل `STYLE_PRESETS` و`MOTIF_KEYS` في `quran_renderer/config.py`. الأنماط الحالية: green وmidnight وroyal وocean وsand وslate. والزخارف: rosette وeight_point_star وnested_medallion وdiamond_lattice وflower وarchwork.
+## الأنماط البصرية
+تضم لوحة التصميم عشرة أنماط متباينة: `green` (زمردي)، `midnight` (ليلي)، `royal` (ملكي)، `ocean` (فيروزي عميق)، `sand` (صحراوي)، `slate` (رصين)، `burgundy` (عنابي)، `ivory` (عاجي)، `obsidian` (فضي أسود)، و`plum` (بنفسجي هادئ). كل نمط يحدد ألوان النص والخلفية والزخرفة والتوهج، ويضبط حركة الزخرفة بشكل مستقل.
+
+الزخارف المتاحة: `rosette` و`eight_point_star` و`nested_medallion` و`diamond_lattice` و`flower` و`archwork`. حركة الزخرفة ليست إلزامية، وتُستخدم ببطء شديد في بعض القوالب فقط لتجنب تكرار الإحساس البصري أو تشتيت المشاهد.
 
 ## بيانات التشغيل
 تبقى ملفات `quran.json` و`used_ayahs.json` والخط `Amiri-Regular.ttf` في المسار الرئيسي في هذه المرحلة حتى لا تنكسر مسارات GitHub Actions وDocker الحالية.
