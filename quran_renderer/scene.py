@@ -58,7 +58,7 @@ class QuranScene(Scene):
         if " ".join(wrapped).split() != " ".join(text.split()).split():
             raise ValueError("الآية المعروضة لا تطابق النص الأصلي؛ تم إيقاف التصدير لتجنب حذف الكلمات.")
         block = make_block(wrapped,style)
-        max_width,max_height = config.frame_width-1.0,manim_config.frame_height-6.0
+        max_width,max_height = config.frame_width-1.2,manim_config.frame_height-6.0
         block.scale(min(1.0,max_width/block.width,max_height/block.height)).move_to(ORIGIN+DOWN*.1)
         heading = VGroup(
             Text(surah_name,font=FONT_NAME,font_size=46,color=style["text"]),
@@ -66,7 +66,8 @@ class QuranScene(Scene):
         ).arrange(DOWN,buff=.18).move_to(UP*(config.frame_height/2-2.1))
         divider = Line(LEFT*.55,RIGHT*.55,color=style["gold"],stroke_width=1.8).next_to(heading,DOWN,buff=.48)
         footer = Text(BRAND_NAME,font=FONT_NAME,font_size=30,color=style["info"]).move_to(DOWN*(config.frame_height/2-1.45))
-        glow = VGroup(*[Circle(radius=1.5+i*.7,stroke_width=0,fill_color=style["glow"],fill_opacity=.010) for i in range(5)]).move_to(block.get_center())
+        # A soft halo, deliberately subtle so it never washes out the glyphs.
+        glow = VGroup(*[Circle(radius=1.5+i*.7,stroke_width=0,fill_color=style["glow"],fill_opacity=.008) for i in range(5)]).move_to(block.get_center())
         self.add(glow)
         entrance = min(.8,max(.2,audio_length*.15))
         self.play(FadeIn(heading,shift=DOWN*.12),FadeIn(divider),FadeIn(block,shift=UP*.12),FadeIn(footer),run_time=entrance,rate_func=smooth)
