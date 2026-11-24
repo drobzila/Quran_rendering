@@ -1,9 +1,9 @@
 name: Quran Daily Scheduler
 
 on:
-  # 06:17 Algeria time (UTC+1), deliberately away from the top of the hour.
+  # 06:05 Algeria time (UTC+1), deliberately away from the top of the hour.
   schedule:
-    - cron: "17 5 * * *"
+    - cron: "5 5 * * *"
   workflow_dispatch:
 
 concurrency:
