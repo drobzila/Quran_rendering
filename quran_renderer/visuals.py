@@ -14,7 +14,8 @@ def build_background(style=None):
     return ImageMobject(rgb).set(height=config.frame_height, width=config.frame_width)
 
 def decorative_motif(style=None, motif_key=None):
-    style = style or STYLE_PRESETS["green"]; motif_key = motif_key or "rosette"
+    style = style or STYLE_PRESETS["green"]
+    motif_key = motif_key or "rosette"
     if motif_key == "rosette":
         petals = VGroup(*[Circle(radius=.78).move_to(.78*np.array([np.cos(TAU*i/8),np.sin(TAU*i/8),0])) for i in range(8)])
         motif = VGroup(Circle(radius=.82), petals, Circle(radius=1.62), Circle(radius=1.78))
@@ -31,12 +32,16 @@ def decorative_motif(style=None, motif_key=None):
     else:
         arches = VGroup(*[Arc(radius=r,start_angle=0,angle=PI,arc_center=ORIGIN).shift(DOWN*.15) for r in (.75,1.05,1.35,1.65)])
         motif = VGroup(arches, Line(LEFT*1.7,RIGHT*1.7).shift(DOWN*.15))
-    motif.set_color(style["accent"]).set_stroke(width=2).set_opacity(.19).set(width=4.15).move_to(ORIGIN)
-    motif.add_updater(lambda mob, dt: mob.rotate(TAU*.05*dt))
+    motif.set_color(style["accent"]).set_stroke(width=1.5).set(width=4.15).move_to(ORIGIN)
+    motif.set_opacity(style.get("motif_opacity", .08))
+    speed = style.get("motion", 0)
+    if speed:
+        motif.add_updater(lambda mob, dt: mob.rotate(TAU*speed*dt))
     return motif
 
-def decorative_divider(width=2.0):
-    return Line(LEFT*(width/2), RIGHT*(width/2), stroke_color=GOLD, stroke_width=1.5)
+def decorative_divider(width=2.0, style=None):
+    color = (style or STYLE_PRESETS["green"])["gold"]
+    return Line(LEFT*(width/2), RIGHT*(width/2), stroke_color=color, stroke_width=1.5)
 
 def ayah_number_circle(number: str) -> VGroup:
     circle = Circle(radius=.35, color=GOLD, stroke_width=3)
@@ -49,26 +54,26 @@ def progress_bar(total_width=None, y=None):
     track = Line(LEFT*(total_width/2),RIGHT*(total_width/2),stroke_color=GRAY_E,stroke_width=6)
     return track.move_to([0,y,0])
 
-def corner_ornament(x: float, y: float, flip_x: float, flip_y: float) -> VGroup:
-    gold = "#b89a55"
+def corner_ornament(x: float, y: float, flip_x: float, flip_y: float, style=None) -> VGroup:
+    gold = (style or STYLE_PRESETS["green"])["gold"]
     horizontal = Line(ORIGIN,RIGHT*1.0,color=gold,stroke_width=1.2).move_to([x+flip_x*.5,y,0])
     vertical = Line(ORIGIN,DOWN*1.0,color=gold,stroke_width=1.2).move_to([x,y-flip_y*.5,0])
     diamond = Square(side_length=.2,color=gold,stroke_width=1.1,fill_opacity=0).rotate(PI/4).move_to([x+flip_x*.22,y-flip_y*.22,0])
     dot = Dot([x+flip_x*.58,y-flip_y*.58,0],radius=.025,color=gold)
-    return VGroup(horizontal,vertical,diamond,dot).set_opacity(.58)
+    return VGroup(horizontal,vertical,diamond,dot).set_opacity(.48)
+
 def decorative_frame(style=None):
-    """Subtle ornamental frame and corner flourishes for vertical video."""
+    """Thin frame with restrained corner details; leaves the text safe area clear."""
     style = style or STYLE_PRESETS["green"]
     color = style["gold"]
     w, h = config.frame_width, config.frame_height
-    margin = 0.28
-    inset = 0.18
+    margin, inset = .38, .14
     frame = VGroup()
-    frame.add(Rectangle(width=w - 2 * margin, height=h - 2 * margin, stroke_color=color, stroke_width=1.4, fill_opacity=0))
-    frame.add(Rectangle(width=w - 2 * (margin + inset), height=h - 2 * (margin + inset), stroke_color=color, stroke_width=0.55, fill_opacity=0).set_opacity(0.65))
+    frame.add(Rectangle(width=w - 2 * margin, height=h - 2 * margin, stroke_color=color, stroke_width=1.05, fill_opacity=0))
+    frame.add(Rectangle(width=w - 2 * (margin + inset), height=h - 2 * (margin + inset), stroke_color=color, stroke_width=.45, fill_opacity=0).set_opacity(.35))
     for x in (-w / 2 + margin + 0.08, w / 2 - margin - 0.08):
         for y in (-h / 2 + margin + 0.08, h / 2 - margin - 0.08):
-            ornament = Square(side_length=0.23, stroke_color=color, stroke_width=1.4, fill_opacity=0).rotate(PI / 4).move_to([x, y, 0])
-            dot = Dot([x, y, 0], radius=0.035, color=color)
+            ornament = Square(side_length=0.20, stroke_color=color, stroke_width=1.1, fill_opacity=0).rotate(PI / 4).move_to([x, y, 0])
+            dot = Dot([x, y, 0], radius=0.025, color=color)
             frame.add(ornament, dot)
-    return frame.set_opacity(0.75)
+    return frame.set_opacity(.52)

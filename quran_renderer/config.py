@@ -2,8 +2,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from manim import config
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
-# Keep the existing data files at repository root so existing Actions and tools remain compatible.
 DATA_DIR = ROOT_DIR
 ASSETS_DIR = ROOT_DIR / "assets"
 FONT_DIR = ASSETS_DIR / "fonts"
@@ -30,11 +30,18 @@ TEMP_AUDIO = str(ROOT_DIR / "temp.mp3")
 SELECTED_AYAH_FILE = ROOT_DIR / "selected_ayah.json"
 SELECTED_AUDIO_FILE = ROOT_DIR / "selected_audio.txt"
 TITLE_FILE = ROOT_DIR / "title.txt"
+
+# Each preset defines a genuinely contrasting palette, text contrast, and ornament behavior.
 STYLE_PRESETS = {
-"green": {"name":"الأخضر الإسلامي","top":"#F2FFF7","bottom":"#FFFFFF","text":"#1B5E20","accent":"#2E7D32","info":"#5F6962","gold":"#B89A55","glow":"#2E7D32"},
-"midnight": {"name":"الأزرق الليلي","top":"#081A33","bottom":"#142D4E","text":"#2E363B","accent":"#75B9F2","info":"#C5D4E8","gold":"#E6C77A","glow":"#75B9F2"},
-"ocean": {"name":"المحيط الفيروزي","top":"#E8FAFC","bottom":"#C9EEF1","text":"#064B59","accent":"#087E8B","info":"#426A70","gold":"#B78A43","glow":"#39A8B5"},
-"sand": {"name":"الذهبي الصحراوي","top":"#FFF8E8","bottom":"#EEDDBB","text":"#513B20","accent":"#9B7135","info":"#76664F","gold":"#B18A45","glow":"#C49A50"},
-"slate": {"name":"الرمادي الفاخر","top":"#202833","bottom":"#394653","text":"#F3F5F7","accent":"#B7C5D4","info":"#D1D8DF","gold":"#D6B56D","glow":"#9EADBC"},
+    "green": {"name":"زمردي","top":"#062B23","bottom":"#0B4033","text":"#FFF9E8","accent":"#58B99A","info":"#C8DAD1","gold":"#D6B66D","glow":"#56A98B","motif_opacity":0.10,"motion":0.0},
+    "midnight": {"name":"ليلي","top":"#071426","bottom":"#132B49","text":"#F5F7FF","accent":"#82B9EA","info":"#C8D5E8","gold":"#E6C77A","glow":"#5A8BC2","motif_opacity":0.09,"motion":0.025},
+    "royal": {"name":"ملكي","top":"#211336","bottom":"#38224F","text":"#FFF7E8","accent":"#C6A0F0","info":"#D8CBEA","gold":"#E5C77A","glow":"#A982D5","motif_opacity":0.09,"motion":0.0},
+    "ocean": {"name":"فيروزي عميق","top":"#06343B","bottom":"#075360","text":"#F0FCFC","accent":"#65C6CE","info":"#C5E5E7","gold":"#D8B978","glow":"#45AAB5","motif_opacity":0.08,"motion":0.018},
+    "sand": {"name":"صحراوي","top":"#F8EEDC","bottom":"#E5D1AE","text":"#38291B","accent":"#8B6334","info":"#66513B","gold":"#A87938","glow":"#C39A58","motif_opacity":0.08,"motion":0.0},
+    "slate": {"name":"رصين","top":"#171D26","bottom":"#303B49","text":"#F5F5F2","accent":"#A9C0D2","info":"#D0D9E1","gold":"#C7A96B","glow":"#879BAE","motif_opacity":0.07,"motion":0.012},
+    "burgundy": {"name":"عنابي","top":"#300D1D","bottom":"#541A32","text":"#FFF5ED","accent":"#D68AAB","info":"#E5C8D4","gold":"#D8B26C","glow":"#B75B83","motif_opacity":0.09,"motion":0.0},
+    "ivory": {"name":"عاجي","top":"#FFF8EC","bottom":"#EDE1CA","text":"#33271D","accent":"#8E6B45","info":"#665442","gold":"#AD8247","glow":"#C5A56B","motif_opacity":0.06,"motion":0.0},
+    "obsidian": {"name":"فضي أسود","top":"#090B0F","bottom":"#20242B","text":"#F7F7F7","accent":"#AEB9C6","info":"#CFD4DB","gold":"#B9C4CF","glow":"#8292A4","motif_opacity":0.055,"motion":0.01},
+    "plum": {"name":"بنفسجي هادئ","top":"#241B35","bottom":"#3A2B50","text":"#F9F3FF","accent":"#BFA6DE","info":"#D9CDE9","gold":"#D8BD84","glow":"#9275BA","motif_opacity":0.075,"motion":0.015},
 }
 MOTIF_KEYS = ["rosette", "eight_point_star", "nested_medallion", "diamond_lattice", "flower", "archwork"]
