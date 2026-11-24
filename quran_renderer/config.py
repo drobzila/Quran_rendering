@@ -34,9 +34,9 @@ TITLE_FILE = ROOT_DIR / "title.txt"
 # Each preset defines a genuinely contrasting palette, text contrast, and ornament behavior.
 STYLE_PRESETS = {
     "green": {"name":"زمردي","top":"#062B23","bottom":"#0B4033","text":"#FFF9E8","accent":"#58B99A","info":"#C8DAD1","gold":"#D6B66D","glow":"#56A98B","motif_opacity":0.10,"motion":0.0},
-    "midnight": {"name":"ليلي","top":"#071426","bottom":"#132B49","text":"#F5F7FF","accent":"#82B9EA","info":"#C8D5E8","gold":"#E6C77A","glow":"#5A8BC2","motif_opacity":0.09,"motion":0.025},
+    "midnight": {"name":"ليلي","top":"#DCEAF7","bottom":"#B9D1E8","text":"#18324B","accent":"#416B91","info":"#36536D","gold":"#9A7736","glow":"#7FA6C8","motif_opacity":0.09,"motion":0.025},
     "royal": {"name":"ملكي","top":"#211336","bottom":"#38224F","text":"#FFF7E8","accent":"#C6A0F0","info":"#D8CBEA","gold":"#E5C77A","glow":"#A982D5","motif_opacity":0.09,"motion":0.0},
-    "ocean": {"name":"فيروزي عميق","top":"#06343B","bottom":"#075360","text":"#F0FCFC","accent":"#65C6CE","info":"#C5E5E7","gold":"#D8B978","glow":"#45AAB5","motif_opacity":0.08,"motion":0.018},
+    "ocean": {"name":"فيروزي عميق","top":"#DDF2F3","bottom":"#B6E0E2","text":"#123C43","accent":"#287A83","info":"#315E63","gold":"#94723A","glow":"#70B9BE","motif_opacity":0.08,"motion":0.018},
     "sand": {"name":"صحراوي","top":"#F8EEDC","bottom":"#E5D1AE","text":"#38291B","accent":"#8B6334","info":"#66513B","gold":"#A87938","glow":"#C39A58","motif_opacity":0.08,"motion":0.0},
     "slate": {"name":"رصين","top":"#171D26","bottom":"#303B49","text":"#F5F5F2","accent":"#A9C0D2","info":"#D0D9E1","gold":"#C7A96B","glow":"#879BAE","motif_opacity":0.07,"motion":0.012},
     "burgundy": {"name":"عنابي","top":"#300D1D","bottom":"#541A32","text":"#FFF5ED","accent":"#D68AAB","info":"#E5C8D4","gold":"#D8B26C","glow":"#B75B83","motif_opacity":0.09,"motion":0.0},
